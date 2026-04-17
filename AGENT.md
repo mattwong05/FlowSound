@@ -47,6 +47,7 @@ Allowed commit types:
 ## Engineering Constraints
 
 - Keep Core Audio code isolated from UI.
+- Keep watched app whitelist parsing and validation in settings code, not Core Audio or UI code.
 - Keep Apple Music automation isolated from product state.
 - Treat permission failures as explicit states.
 - Avoid silent behavior changes.

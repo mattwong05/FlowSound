@@ -12,17 +12,17 @@ The current build is a native Swift menu bar app with:
 - A tested ducking state machine.
 - Apple Music control through AppleScript and `osascript`.
 - Fade-out, pause, play, and fade-in behavior.
-- Core Audio process tap monitoring for Safari and Telegram through bundle ID-based taps.
+- Core Audio process tap monitoring for watched apps through bundle ID-based taps.
 - Manual menu items to simulate watched audio and quiet periods for debugging.
 - Split logo assets generated from `FlowSound-iCon.png`, including dark-background, light-background, and menu bar template variants.
 - An About window that chooses the light or dark FlowSound logo artwork based on appearance.
-- A Preferences window for active threshold, active duration, quiet duration, fade-out duration, fade-in duration, menu bar text visibility, and launch-at-login.
+- A Preferences window for watched app bundle identifiers, active threshold, active duration, quiet duration, fade-out duration, fade-in duration, menu bar text visibility, and launch-at-login.
 - A generated `.icns` app icon bundled into `FlowSound.app`.
 - Default activation on launch, with manual Activate / Deactivate control from the menu bar.
 - Active and deactivated menu bar icons generated from the supplied icon artwork.
 - App bundle packaging with Apple Events and system audio capture usage descriptions.
 
-The editable app whitelist is still pending. The current whitelist is fixed to Safari and Telegram.
+The default whitelist is Safari and Telegram. You can edit the watched app bundle identifiers in Preferences.
 
 ## MVP Behavior
 
@@ -115,6 +115,7 @@ The app icon is generated as `Assets/FlowSound.icns` during packaging and copied
 
 Open `Preferences...` from the menu bar menu to configure:
 
+- Watched app bundle identifiers, one per line.
 - Active threshold.
 - Active duration.
 - Quiet duration.
@@ -122,6 +123,15 @@ Open `Preferences...` from the menu bar menu to configure:
 - Fade-in duration.
 - Whether the menu bar shows the `FlowSound` text label or only the icon.
 - Whether FlowSound launches at login.
+
+FlowSound validates bundle identifiers before saving. Invalid values are ignored, duplicates are removed, and an empty whitelist falls back to the default Safari and Telegram identifiers. Saving Preferences restarts the Core Audio process tap when FlowSound is active.
+
+Useful commands for finding bundle identifiers:
+
+```sh
+osascript -e 'id of app "Safari"'
+mdls -name kMDItemCFBundleIdentifier -r /Applications/Safari.app
+```
 
 Recommended tests for the first implementation:
 

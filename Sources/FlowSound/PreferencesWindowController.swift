@@ -13,6 +13,7 @@ final class PreferencesWindowController {
     private let showsMenuBarTextCheckbox = NSButton(checkboxWithTitle: "Show FlowSound text in the menu bar", target: nil, action: nil)
     private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Launch FlowSound at login", target: nil, action: nil)
     private let loginItemStatusLabel = NSTextField(labelWithString: "")
+    private let watchedBundleIdentifiersTextView = NSTextView()
 
     init(settingsStore: FlowSoundSettingsStore) {
         self.settingsStore = settingsStore
@@ -37,6 +38,7 @@ final class PreferencesWindowController {
         contentView.addArrangedSubview(title)
 
         contentView.addArrangedSubview(makeForm())
+        contentView.addArrangedSubview(makeWatchedAppsEditor())
 
         showsMenuBarTextCheckbox.target = self
         contentView.addArrangedSubview(showsMenuBarTextCheckbox)
@@ -60,7 +62,7 @@ final class PreferencesWindowController {
         contentView.addArrangedSubview(buttonRow)
 
         let preferencesWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 620, height: 410),
+            contentRect: NSRect(x: 0, y: 0, width: 660, height: 560),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -87,6 +89,40 @@ final class PreferencesWindowController {
         form.addArrangedSubview(formRow("Fade out", fadeOutDurationField, "Seconds to fade before pause. Default: 3.0"))
         form.addArrangedSubview(formRow("Fade in", fadeInDurationField, "Seconds to restore volume. Default: 3.0"))
         return form
+    }
+
+    private func makeWatchedAppsEditor() -> NSStackView {
+        let section = NSStackView()
+        section.orientation = .vertical
+        section.alignment = .leading
+        section.spacing = 6
+
+        let label = NSTextField(labelWithString: "Watched app bundle identifiers")
+        label.font = .systemFont(ofSize: 13, weight: .semibold)
+        section.addArrangedSubview(label)
+
+        let help = NSTextField(labelWithString: "One bundle identifier per line. FlowSound restarts the process tap after saving.")
+        help.textColor = .secondaryLabelColor
+        help.lineBreakMode = .byTruncatingTail
+        help.maximumNumberOfLines = 1
+        help.widthAnchor.constraint(equalToConstant: 590).isActive = true
+        section.addArrangedSubview(help)
+
+        watchedBundleIdentifiersTextView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        watchedBundleIdentifiersTextView.isAutomaticQuoteSubstitutionEnabled = false
+        watchedBundleIdentifiersTextView.isAutomaticDashSubstitutionEnabled = false
+        watchedBundleIdentifiersTextView.isRichText = false
+        watchedBundleIdentifiersTextView.textContainerInset = NSSize(width: 6, height: 6)
+
+        let scrollView = NSScrollView()
+        scrollView.borderType = .bezelBorder
+        scrollView.hasVerticalScroller = true
+        scrollView.documentView = watchedBundleIdentifiersTextView
+        scrollView.widthAnchor.constraint(equalToConstant: 590).isActive = true
+        scrollView.heightAnchor.constraint(equalToConstant: 96).isActive = true
+        section.addArrangedSubview(scrollView)
+
+        return section
     }
 
     private func formRow(_ label: String, _ field: NSTextField, _ help: String) -> NSStackView {
@@ -123,6 +159,7 @@ final class PreferencesWindowController {
         quietDurationField.stringValue = Self.format(settings.quietDuration)
         fadeOutDurationField.stringValue = Self.format(settings.fadeOutDuration)
         fadeInDurationField.stringValue = Self.format(settings.fadeInDuration)
+        watchedBundleIdentifiersTextView.string = settings.watchedBundleIdentifiers.joined(separator: "\n")
         showsMenuBarTextCheckbox.state = settings.showsMenuBarText ? .on : .off
         launchAtLoginCheckbox.state = LoginItemController.isEnabled ? .on : .off
         loginItemStatusLabel.stringValue = LoginItemController.statusText
@@ -135,6 +172,9 @@ final class PreferencesWindowController {
         settings.quietDuration = clampedDouble(quietDurationField, fallback: settings.quietDuration, range: 0.1...60.0)
         settings.fadeOutDuration = clampedDouble(fadeOutDurationField, fallback: settings.fadeOutDuration, range: 0.1...30.0)
         settings.fadeInDuration = clampedDouble(fadeInDurationField, fallback: settings.fadeInDuration, range: 0.1...30.0)
+        settings.watchedBundleIdentifiers = FlowSoundSettings.validWatchedBundleIdentifiers(
+            FlowSoundSettings.bundleIdentifiers(fromText: watchedBundleIdentifiersTextView.string)
+        )
         settings.showsMenuBarText = showsMenuBarTextCheckbox.state == .on
         settingsStore.settings = settings
         updateLaunchAtLogin()

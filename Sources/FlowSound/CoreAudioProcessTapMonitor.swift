@@ -115,9 +115,10 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
     }
 
     private func startOnQueue(settings: FlowSoundSettings, sessionID: UUID) throws {
+        let watchedBundleIdentifiers = FlowSoundSettings.validWatchedBundleIdentifiers(settings.watchedBundleIdentifiers)
         let description = CATapDescription()
         description.name = "FlowSound Watched Apps"
-        description.bundleIDs = settings.watchedBundleIdentifiers
+        description.bundleIDs = watchedBundleIdentifiers
         description.isExclusive = false
         description.isMixdown = true
         description.isMono = false
@@ -179,7 +180,7 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
         startQuietTimer()
         FlowSoundDiagnostics.log("Core Audio process tap starting device IO")
         try check(AudioDeviceStart(aggregateDeviceID, ioProcID), operation: "AudioDeviceStart")
-        let watchedApps = settings.watchedBundleIdentifiers.joined(separator: ", ")
+        let watchedApps = watchedBundleIdentifiers.joined(separator: ", ")
         FlowSoundDiagnostics.log("Core Audio process tap started for \(watchedApps)")
     }
 

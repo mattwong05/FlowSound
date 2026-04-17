@@ -14,6 +14,18 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.7.0] - 2026-04-18
+
+### Added
+
+- Added editable watched app bundle identifiers in Preferences.
+- Added bundle identifier parsing, validation, deduplication, and persistence.
+- Added settings tests for watched app whitelist parsing and storage.
+
+### Changed
+
+- Changed Core Audio process tap setup to use the persisted watched app whitelist.
+
 ## [0.6.0] - 2026-04-18
 
 ### Added

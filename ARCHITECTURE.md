@@ -33,6 +33,7 @@ Owns audio activity detection. The current implementation uses `CoreAudioProcess
 Responsibilities:
 
 - Create and destroy bundle ID-based process taps.
+- Recreate taps when the watched app whitelist changes.
 - Wrap the tap in a private aggregate device and start an IO proc.
 - Read captured audio buffers.
 - Compute RMS level from the captured PCM buffers.
@@ -88,7 +89,7 @@ Persists local configuration.
 Initial settings:
 
 - Enabled flag.
-- Whitelisted bundle identifiers.
+- User-editable whitelisted bundle identifiers.
 - Active threshold.
 - Active duration.
 - Quiet duration.
@@ -97,6 +98,8 @@ Initial settings:
 - Menu bar text visibility.
 
 Settings are stored in `UserDefaults` through `FlowSoundSettingsStore`. Updates are applied to the menu bar presentation immediately and forwarded to `FlowSoundService`.
+
+Watched bundle identifiers are parsed from Preferences, validated, deduplicated, and persisted. If the saved whitelist is empty or invalid, FlowSound falls back to the default Safari and Telegram identifiers.
 
 ### LoginItemController
 

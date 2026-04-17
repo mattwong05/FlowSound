@@ -101,9 +101,9 @@ Do not include advanced UI, per-app configuration, launch-at-login, or distribut
 
 ## Current Implementation Status
 
-Version 0.6.x contains the native menu bar shell, default activation on launch, active and deactivated menu bar icons, Core Audio process tap monitoring, RMS activity detection, state machine, Apple Music automation adapter, app bundle packaging, logo assets, app icon, preferences window, launch-at-login control, and manual audio activity simulation.
+Version 0.7.x contains the native menu bar shell, default activation on launch, active and deactivated menu bar icons, Core Audio process tap monitoring, RMS activity detection, state machine, Apple Music automation adapter, app bundle packaging, logo assets, app icon, preferences window, editable watched app whitelist, launch-at-login control, and manual audio activity simulation.
 
-This means the current build can validate system audio capture permission prompts, Apple Music permission prompts, fade behavior, pause/resume behavior, menu controls, state transitions, and fixed Safari / Telegram audio detection.
+This means the current build can validate system audio capture permission prompts, Apple Music permission prompts, fade behavior, pause/resume behavior, menu controls, state transitions, default Safari / Telegram audio detection, and custom watched app bundle identifiers.
 
 macOS 26 menu bar behavior needs explicit hardening. Development builds launched from `.build/FlowSound.app` may not appear in System Settings > Menu Bar > Allow in the Menu Bar even when the app process is running and an `NSStatusItem` is created. Release validation should include an installed, signed app bundle and a fresh user account.
 

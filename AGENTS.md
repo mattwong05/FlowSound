@@ -70,6 +70,7 @@ Final responses must end with proposed commit lines and the files included in ea
 
 - Prefer native Swift, SwiftUI, AppKit, and Core Audio.
 - Keep Core Audio process tap logic isolated from UI.
+- Keep watched app whitelist parsing and validation in settings code.
 - Keep Apple Music automation isolated behind a `MusicController` boundary.
 - Treat audio capture and Apple Events permission failures as explicit app states.
 - Do not resume Apple Music unless FlowSound paused it.

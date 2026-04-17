@@ -43,6 +43,7 @@
 ## 0.7.x Configuration
 
 - Add editable whitelist by app bundle identifier.
+- Persist and validate watched app bundle identifiers.
 - Add status and diagnostics view.
 
 ## 0.8.x Reliability

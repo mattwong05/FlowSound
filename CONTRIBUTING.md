@@ -51,6 +51,7 @@ Before merging functional changes:
 - Run state machine tests.
 - Manually test Safari playback.
 - Manually test Telegram short notification sounds and longer media playback.
+- Manually test a custom watched bundle identifier from Preferences, then reset defaults.
 - Confirm Apple Music does not resume when the user paused it manually.
 - Confirm disabling the service cancels active fades and timers.
 
