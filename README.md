@@ -1,8 +1,25 @@
 # FlowSound
 
-FlowSound is planned as a macOS menu bar app that keeps Apple Music playing as background music, then automatically fades and pauses it when selected apps start playing audio. When those apps become quiet again, FlowSound resumes Apple Music and fades it back to the previous volume.
+FlowSound is a macOS menu bar app that keeps Apple Music playing as background music, then automatically fades and pauses it when selected apps start playing audio. When those apps become quiet again, FlowSound resumes Apple Music and fades it back to the previous volume.
 
 The target platform is macOS 26+. The core APIs needed for the MVP are already available on modern macOS, including Core Audio process taps for outgoing process audio detection.
+
+## Current Implementation
+
+The current build is a native Swift menu bar app with:
+
+- One-click enable and disable from the menu bar.
+- A tested ducking state machine.
+- Apple Music control through AppleScript and `osascript`.
+- Fade-out, pause, play, and fade-in behavior.
+- Manual menu items to simulate watched audio and quiet periods while Core Audio process tap monitoring is implemented.
+- Split logo assets generated from `FlowSound-iCon.png`, including dark-background, light-background, and menu bar template variants.
+- An About window that chooses the light or dark FlowSound logo artwork based on appearance.
+- A Preferences window for active threshold, active duration, quiet duration, fade-out duration, fade-in duration, and menu bar text visibility.
+- A generated `.icns` app icon bundled into `FlowSound.app`.
+- App bundle packaging with Apple Events and system audio capture usage descriptions.
+
+The automatic Core Audio process tap monitor is still the next implementation step. The app is structured so that monitor can replace the current manual test monitor without changing Apple Music control or state machine logic.
 
 ## MVP Behavior
 
@@ -16,10 +33,10 @@ The target platform is macOS 26+. The core APIs needed for the MVP are already a
 
 ## Technical Approach
 
-FlowSound should be implemented as a native Swift app:
+FlowSound is implemented as a native Swift app:
 
-- App shell: SwiftUI plus AppKit menu bar integration.
-- Audio detection: Core Audio process taps.
+- App shell: AppKit menu bar integration.
+- Audio detection: Core Audio process taps through the `AudioActivityMonitor` boundary.
 - Signal analysis: short-window RMS or peak detection.
 - Apple Music control: AppleScript executed through a narrow Swift wrapper.
 - Coordination: explicit state machine to avoid repeated pause/resume loops.
@@ -58,6 +75,44 @@ FlowSound will need:
 If App Sandbox is enabled, Apple Events control of Music must be tested carefully because sandboxing changes automation requirements.
 
 ## Testing
+
+Run automated tests:
+
+```sh
+swift test
+```
+
+Build a local `.app` bundle:
+
+```sh
+scripts/build-app.sh
+open .build/FlowSound.app
+```
+
+FlowSound is a menu bar app. It does not appear in the Dock and does not open a main window on launch. After opening it, look for the FlowSound glyph in the macOS menu bar.
+
+If the process is running but no menu bar item is visible, check the diagnostics log:
+
+```sh
+cat ~/Library/Logs/FlowSound/FlowSound.log
+```
+
+On macOS 26, System Settings > Menu Bar > Allow in the Menu Bar is not a reliable way to discover this development build. FlowSound is currently launched from `.build/FlowSound.app`, is not installed as a login item, and is not packaged as a signed release app. The app should still create an `NSStatusItem` while running, but the settings list may not include it.
+
+The menu bar icon uses a generated transparent template asset extracted from the wave-and-note glyph. macOS tints this asset automatically for light and dark menu bars. The source `FlowSound-iCon.png` is also split into `Assets/FlowSoundLogoDarkBackground.png` and `Assets/FlowSoundLogoLightBackground.png`; keep the full wordmark for About, marketing, or installer screens.
+
+The app icon is generated as `Assets/FlowSound.icns` during packaging and copied into the app bundle. Finder may cache app icons; if the app icon still looks blank after rebuilding, rename or move the rebuilt `.app`, or relaunch Finder.
+
+## Preferences
+
+Open `Preferences...` from the menu bar menu to configure:
+
+- Active threshold.
+- Active duration.
+- Quiet duration.
+- Fade-out duration.
+- Fade-in duration.
+- Whether the menu bar shows the `FlowSound` text label or only the icon.
 
 Recommended tests for the first implementation:
 

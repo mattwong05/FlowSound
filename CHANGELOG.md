@@ -14,6 +14,68 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.3.0] - 2026-04-17
+
+### Added
+
+- Added Preferences window for threshold, timing, fade, and menu bar text settings.
+- Added persistent settings storage through `UserDefaults`.
+- Added generated `.icns` app icon and bundle icon declaration.
+- Added appearance-aware About logo selection for light and dark mode.
+
+### Changed
+
+- Changed startup diagnostics window to a manual menu action instead of showing on every launch.
+- Changed menu bar presentation to respect the user's text visibility preference.
+- Changed app packaging to generate iconset and `.icns` assets.
+
+## [0.2.2] - 2026-04-17
+
+### Added
+
+- Added explicit AppKit main entry point for the menu bar app.
+- Added local diagnostics logging at `~/Library/Logs/FlowSound/FlowSound.log`.
+- Added startup diagnostics window for development builds.
+- Added diagnostics path menu item.
+
+### Changed
+
+- Changed the status item to a fixed-width visible text-and-icon menu item.
+
+### Fixed
+
+- Improved diagnosis for cases where macOS launches FlowSound but the menu bar item is not visible.
+
+## [0.2.1] - 2026-04-17
+
+### Added
+
+- Added generated logo assets split from the supplied source artwork.
+- Added visible menu bar icon fallback using a generated template image and text fallback.
+
+### Changed
+
+- Changed the About window to use the split light-background logo asset.
+- Changed app bundle builds to regenerate logo assets automatically.
+
+### Fixed
+
+- Fixed invisible menu bar status item when the previous SF Symbol name was unavailable.
+
+## [0.2.0] - 2026-04-17
+
+### Added
+
+- Added native Swift Package executable for the FlowSound menu bar app.
+- Added AppKit status menu with enable, disable, quit, and manual audio simulation controls.
+- Added ducking state machine for listening, ducking, paused, restoring, disabled, and error states.
+- Added Apple Music controller using AppleScript through `osascript`.
+- Added fade-out, pause, resume, and fade-in service orchestration.
+- Added About window that displays the supplied FlowSound logo artwork.
+- Added app bundle packaging script and Info.plist permission descriptions.
+- Added state machine tests.
+- Added project ignore rules for SwiftPM and Xcode build output.
+
 ## [0.1.0] - 2026-04-17
 
 ### Added

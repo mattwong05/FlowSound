@@ -13,6 +13,26 @@ Optional tools:
 - SwiftLint.
 - SwiftFormat.
 
+## Build and Test
+
+Run unit tests:
+
+```sh
+swift test
+```
+
+Build a local app bundle:
+
+```sh
+scripts/build-app.sh
+```
+
+Run the app:
+
+```sh
+open .build/FlowSound.app
+```
+
 ## Development Rules
 
 - Keep business logic testable outside the menu bar UI.

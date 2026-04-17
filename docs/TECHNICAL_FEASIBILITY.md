@@ -99,6 +99,14 @@ Build the first version as a local native app with:
 
 Do not include advanced UI, per-app configuration, launch-at-login, or distribution packaging until the core detection and control loop feels reliable.
 
+## Current Implementation Status
+
+Version 0.3.x contains the native menu bar shell, state machine, Apple Music automation adapter, app bundle packaging, logo assets, app icon, preferences window, and manual audio activity simulation. Automatic Core Audio process tap monitoring is intentionally still pending behind the `AudioActivityMonitor` protocol.
+
+This means the current build can validate Apple Music permission prompts, fade behavior, pause/resume behavior, menu controls, and state transitions before the lower-level audio capture implementation is added.
+
+macOS 26 menu bar behavior needs explicit hardening. Development builds launched from `.build/FlowSound.app` may not appear in System Settings > Menu Bar > Allow in the Menu Bar even when the app process is running and an `NSStatusItem` is created. Release validation should include an installed, signed app bundle and a fresh user account.
+
 ## Feasibility Verdict
 
 The product is feasible. The highest-risk area is not the state machine or menu bar app; it is reliable macOS permission handling plus Apple Music automation behavior. The MVP should therefore validate the full permission and automation loop before investing in a larger settings UI.
