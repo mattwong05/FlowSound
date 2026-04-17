@@ -2,9 +2,17 @@ import Foundation
 
 protocol MusicController: Sendable {
     func currentVolume() async throws -> Int
+    func playbackState() async throws -> MusicPlaybackState
     func setVolume(_ volume: Int) async throws
     func play() async throws
     func pause() async throws
+}
+
+enum MusicPlaybackState: Sendable, Equatable {
+    case playing
+    case paused
+    case stopped
+    case unknown(String)
 }
 
 enum MusicControllerError: LocalizedError {
@@ -41,6 +49,25 @@ struct AppleScriptMusicController: MusicController {
             set sound volume to \(clampedVolume)
         end tell
         """)
+    }
+
+    func playbackState() async throws -> MusicPlaybackState {
+        let output = try await runAppleScript("""
+        tell application "Music"
+            player state as string
+        end tell
+        """)
+        let state = output.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        switch state {
+        case "playing":
+            return .playing
+        case "paused":
+            return .paused
+        case "stopped":
+            return .stopped
+        default:
+            return .unknown(state)
+        }
     }
 
     func play() async throws {

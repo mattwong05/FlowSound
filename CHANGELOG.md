@@ -14,6 +14,63 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.10.2] - 2026-04-18
+
+### Fixed
+
+- Fixed launch-at-login registration being blocked when local app builds report `SMAppService` status as `notFound`.
+- Fixed Preferences Save touching the login item when the launch-at-login checkbox state did not change.
+
+## [0.10.1] - 2026-04-18
+
+### Fixed
+
+- Fixed active detection being reset by brief low-RMS buffers before active duration could complete.
+- Fixed repeated Preferences saves registering duplicate launch-at-login entries while approval was pending.
+
+## [0.10.0] - 2026-04-18
+
+### Added
+
+- Added excluded app bundle identifiers for all-apps monitoring mode.
+- Added default exclusions for Apple Music, FlowSound, and common macOS notification services.
+- Added Preferences editor for excluded bundle identifiers.
+
+### Changed
+
+- Changed all-apps mode to use RMS tap activity as the active/quiet source while keeping process-output polling as diagnostics.
+- Changed settings initialization to migrate old default timing values to the current defaults.
+
+## [0.9.0] - 2026-04-18
+
+### Added
+
+- Added audio monitoring mode setting with `All apps except Apple Music` and `Only watched apps` options.
+- Added default all-apps monitoring that excludes Apple Music and FlowSound.
+- Added Preferences control for switching monitoring modes.
+- Added tests for monitoring mode defaults, persistence, and Apple Music exclusions.
+
+### Changed
+
+- Changed default timings to active duration 1 second, quiet duration 3 seconds, fade-out 2 seconds, and fade-in 2 seconds.
+- Changed the Core Audio process tap to use an exclusive tap in all-apps monitoring mode.
+- Changed the process-output quiet release window to reduce active/quiet thrashing from the fallback detector.
+
+## [0.8.0] - 2026-04-18
+
+### Added
+
+- Added automatic Safari watched-app expansion to include WebKit audio helper bundle identifiers.
+- Added Core Audio process-output polling as a fallback activity signal for watched apps.
+- Added diagnostic logs for active candidates, audible samples, matched output processes, audio activity changes, service events, and state transitions.
+- Added Apple Music playback-state check before ducking.
+- Added tests for Safari helper bundle expansion.
+
+### Changed
+
+- Changed Core Audio startup logs to include the expanded watched bundle identifiers.
+- Changed ducking behavior so FlowSound skips pause/restore when Apple Music is not already playing.
+
 ## [0.7.0] - 2026-04-18
 
 ### Added

@@ -19,3 +19,11 @@ import Testing
 
     #expect(stateMachine.send(.disable) == .disabled)
 }
+
+@Test func skippedDuckReturnsToListening() {
+    var stateMachine = DuckingStateMachine()
+
+    #expect(stateMachine.send(.enable) == .listening)
+    #expect(stateMachine.send(.watchedAudioStarted) == .ducking)
+    #expect(stateMachine.send(.duckSkipped) == .listening)
+}

@@ -32,11 +32,13 @@ Owns audio activity detection. The current implementation uses `CoreAudioProcess
 
 Responsibilities:
 
-- Create and destroy bundle ID-based process taps.
+- Create and destroy Core Audio process taps.
 - Recreate taps when the watched app whitelist changes.
+- Support all-apps monitoring by excluding Apple Music and FlowSound from an exclusive process tap.
 - Wrap the tap in a private aggregate device and start an IO proc.
 - Read captured audio buffers.
 - Compute RMS level from the captured PCM buffers.
+- Poll matching Core Audio process objects for active output IO as a fallback signal.
 - Emit debounced activity events: audible, quiet, unavailable, permission denied.
 
 ### SignalDetector
@@ -47,7 +49,10 @@ Responsibilities:
 
 - Compute RMS or peak level.
 - Apply threshold and minimum active duration.
+- Keep the active candidate through short low-RMS gaps.
 - Apply quiet duration before restore.
+- Use a short timer to release active state after recent audible buffers stop.
+- Keep process-output polling diagnostic-only in all-apps mode to avoid stale process state stretching quiet detection.
 - Avoid sending duplicate state changes.
 
 ### MusicController
@@ -57,6 +62,7 @@ Controls Apple Music through a narrow automation adapter. The current implementa
 Responsibilities:
 
 - Read and store Music volume before FlowSound changes it.
+- Read Music playback state before ducking.
 - Fade volume down and up.
 - Pause and play Music.
 - Report automation failures without hiding them.
@@ -78,6 +84,7 @@ Initial states:
 Important rules:
 
 - Resume only when FlowSound paused Music.
+- Skip ducking when Music is paused or stopped before watched audio starts.
 - Cancel restore if watched audio becomes active again.
 - Cancel fade-in or fade-out when service is disabled.
 - Never overwrite the user's volume target after FlowSound has started restoring.
@@ -89,6 +96,8 @@ Persists local configuration.
 Initial settings:
 
 - Enabled flag.
+- Audio monitoring mode.
+- Excluded bundle identifiers for all-apps monitoring mode.
 - User-editable whitelisted bundle identifiers.
 - Active threshold.
 - Active duration.
@@ -99,7 +108,11 @@ Initial settings:
 
 Settings are stored in `UserDefaults` through `FlowSoundSettingsStore`. Updates are applied to the menu bar presentation immediately and forwarded to `FlowSoundService`.
 
+Audio monitoring mode is persisted in `UserDefaults`. The default mode monitors all app audio except Apple Music, FlowSound, and common macOS notification services. Watched-app-only mode uses the user-editable bundle identifier list.
+
 Watched bundle identifiers are parsed from Preferences, validated, deduplicated, and persisted. If the saved whitelist is empty or invalid, FlowSound falls back to the default Safari and Telegram identifiers.
+
+Safari is expanded at runtime to include WebKit helper bundle identifiers because website audio, including YouTube playback, may be emitted by helper processes rather than the `com.apple.Safari` process itself.
 
 ### LoginItemController
 
@@ -108,10 +121,13 @@ Controls launch-at-login using `SMAppService.mainApp`.
 Responsibilities:
 
 - Read the current login item status.
-- Register or unregister FlowSound as a login item.
+- Register FlowSound from `notRegistered` or `notFound` states.
+- Unregister FlowSound from `enabled` or `requiresApproval` states.
+- Avoid repeated registration while macOS is waiting for login item approval.
+- Avoid touching the login item when Preferences is saved without changing the checkbox.
 - Open System Settings > Login Items when user approval is needed.
 
-Local debug builds may not fully support this until signed and installed.
+Local debug builds may report `notFound` before registration. FlowSound attempts registration instead of treating that status as an app-level unavailable state, but release validation should still use a signed and installed app.
 
 ### LogoAssets
 
@@ -134,17 +150,19 @@ The app bundle icon uses the generated `.icns` file declared through `CFBundleIc
 
 ## Default Configuration
 
-- Whitelist: Safari and Telegram.
-- Active duration: 0.5 seconds.
-- Quiet duration: 5 seconds.
-- Fade-out duration: 3 seconds.
-- Fade-in duration: 3 seconds.
+- Monitoring mode: all apps except Apple Music.
+- Excluded bundle identifiers: Apple Music, FlowSound, and common macOS notification services.
+- Watched-app-only fallback whitelist: Safari and Telegram.
+- Active duration: 1 second.
+- Quiet duration: 3 seconds.
+- Fade-out duration: 2 seconds.
+- Fade-in duration: 2 seconds.
 
 ## Data Flow
 
 ```mermaid
 flowchart LR
-    Apps["Whitelisted apps"] --> AudioWatcher["AudioWatcher"]
+    Apps["Other app audio"] --> AudioWatcher["AudioWatcher"]
     AudioWatcher --> SignalDetector["SignalDetector"]
     SignalDetector --> StateMachine["DuckingStateMachine"]
     StateMachine --> MusicController["MusicController"]
@@ -158,6 +176,9 @@ flowchart LR
 ## Design Decisions
 
 - Use Core Audio process taps instead of microphone input so FlowSound detects app output, not room sound. The codebase currently keeps this behind `AudioActivityMonitor`.
+- Use all-apps-except-Music monitoring by default to avoid per-app bundle identifier friction.
+- Use an excluded bundle identifier list to filter Apple Music, FlowSound, and common notification services from all-apps monitoring.
+- Use Core Audio process-output polling as a fallback activity source when a matching process is actively outputting audio.
 - Use AppleScript as a small adapter instead of ScriptingBridge-heavy integration.
 - Keep the first version local-only with no network service.
 - Treat permission failures as first-class app states.

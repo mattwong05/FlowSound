@@ -33,7 +33,7 @@ Run the app:
 open .build/FlowSound.app
 ```
 
-Launch-at-login uses `SMAppService` and should be validated with a signed, installed app bundle before release. Local `.build/FlowSound.app` builds may report that login item registration requires approval or is unavailable.
+Launch-at-login uses `SMAppService` and should be validated with a signed, installed app bundle before release. Local `.build/FlowSound.app` builds may report `notFound` before registration or `requiresApproval` while macOS is waiting for user approval. Saving Preferences without changing the launch-at-login checkbox must not register another login item.
 
 ## Development Rules
 
@@ -48,11 +48,18 @@ Launch-at-login uses `SMAppService` and should be validated with a signed, insta
 Before merging functional changes:
 
 - Run unit tests.
+- For launch-at-login changes, test both paths: changing the checkbox should call the native registration path, while saving Preferences again without changing the checkbox should leave the login item untouched.
 - Run state machine tests.
-- Manually test Safari playback.
-- Manually test Telegram short notification sounds and longer media playback.
+- Manually test Safari playback in all-apps monitoring mode.
+- Confirm Safari playback logs either RMS activity or a matched WebKit output process.
+- Manually test Telegram short notification sounds and longer media playback in all-apps monitoring mode.
+- Manually test a short macOS notification sound and confirm it does not trigger ducking.
+- Manually test excluded bundle identifiers by adding a noisy app and confirming it is ignored in all-apps mode.
+- Manually test watched-app-only mode after changing the monitoring mode in Preferences.
 - Manually test a custom watched bundle identifier from Preferences, then reset defaults.
+- Save Preferences repeatedly while launch-at-login requires approval and confirm System Settings does not gain duplicate login items.
 - Confirm Apple Music does not resume when the user paused it manually.
+- Confirm FlowSound skips ducking when Apple Music is paused or stopped before watched audio starts.
 - Confirm disabling the service cancels active fades and timers.
 
 ## Versioning

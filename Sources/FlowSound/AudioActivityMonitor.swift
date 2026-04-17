@@ -21,6 +21,7 @@ enum AudioActivityMonitorError: LocalizedError {
     case processTapUnavailable
     case coreAudioFailure(operation: String, status: OSStatus)
     case missingTapUID
+    case missingProcessBundleID
     case invalidFormat
 
     var errorDescription: String? {
@@ -31,6 +32,8 @@ enum AudioActivityMonitorError: LocalizedError {
             "\(operation) failed with Core Audio status \(status) (\(Self.fourCharacterCode(status)))."
         case .missingTapUID:
             "Core Audio did not return a tap UID."
+        case .missingProcessBundleID:
+            "Core Audio did not return a process bundle identifier."
         case .invalidFormat:
             "Core Audio returned an unsupported tap format."
         }

@@ -48,6 +48,9 @@ Allowed commit types:
 
 - Keep Core Audio code isolated from UI.
 - Keep watched app whitelist parsing and validation in settings code, not Core Audio or UI code.
+- Keep monitoring mode behavior explicit in settings and docs.
+- Keep excluded bundle identifier behavior explicit in settings and docs.
+- Keep known helper-process expansion explicit and documented.
 - Keep Apple Music automation isolated from product state.
 - Treat permission failures as explicit states.
 - Avoid silent behavior changes.

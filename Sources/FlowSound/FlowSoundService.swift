@@ -38,14 +38,17 @@ final class FlowSoundService {
         guard state == .disabled else { return }
 
         do {
+            FlowSoundDiagnostics.log("service enabling")
             try activityMonitor.start(settings: settings)
             transition(.enable)
         } catch {
+            FlowSoundDiagnostics.log("service enable failed: \(error.localizedDescription)")
             transition(.failed(error.localizedDescription))
         }
     }
 
     func disable() {
+        FlowSoundDiagnostics.log("service disabling")
         currentTask?.cancel()
         quietTask?.cancel()
         activityMonitor.stop()
@@ -67,6 +70,7 @@ final class FlowSoundService {
     }
 
     private func handle(_ activity: AudioActivity) {
+        FlowSoundDiagnostics.log("service received audio activity: \(activity == .active ? "active" : "quiet") while \(state.label)")
         switch activity {
         case .active:
             quietTask?.cancel()
@@ -80,6 +84,7 @@ final class FlowSoundService {
     }
 
     private func scheduleRestoreAfterQuietWindow() {
+        FlowSoundDiagnostics.log("scheduling restore after \(settings.quietDuration) seconds of quiet")
         quietTask?.cancel()
         quietTask = Task { [weak self] in
             guard let self else { return }
@@ -90,20 +95,32 @@ final class FlowSoundService {
     }
 
     private func startDucking() {
+        FlowSoundDiagnostics.log("starting Apple Music ducking")
         currentTask?.cancel()
         currentTask = Task { [weak self] in
             guard let self else { return }
 
             do {
+                let playbackState = try await musicController.playbackState()
+                guard playbackState == .playing else {
+                    FlowSoundDiagnostics.log("Apple Music is \(playbackState.label); skipping duck and restore")
+                    restoreVolume = nil
+                    pausedByFlowSound = false
+                    transition(.duckSkipped)
+                    return
+                }
                 let originalVolume = try await musicController.currentVolume()
                 restoreVolume = originalVolume
+                FlowSoundDiagnostics.log("captured Apple Music volume \(originalVolume), fading out over \(settings.fadeOutDuration) seconds")
                 try await fadeVolume(from: originalVolume, to: 0, duration: settings.fadeOutDuration)
                 guard !Task.isCancelled else { return }
                 try await musicController.pause()
                 pausedByFlowSound = true
+                FlowSoundDiagnostics.log("Apple Music paused by FlowSound")
                 transition(.duckCompleted)
             } catch {
                 guard !Task.isCancelled else { return }
+                FlowSoundDiagnostics.log("Apple Music ducking failed: \(error.localizedDescription)")
                 transition(.failed(error.localizedDescription))
             }
         }
@@ -115,6 +132,7 @@ final class FlowSoundService {
             return
         }
 
+        FlowSoundDiagnostics.log("starting Apple Music restore")
         transition(.watchedAudioStopped)
         currentTask?.cancel()
         currentTask = Task { [weak self] in
@@ -124,6 +142,7 @@ final class FlowSoundService {
                 let targetVolume = restoreVolume ?? FlowSoundConstants.defaultRestoreVolume
                 if pausedByFlowSound {
                     try await musicController.play()
+                    FlowSoundDiagnostics.log("Apple Music play sent, fading in to \(targetVolume) over \(settings.fadeInDuration) seconds")
                     try await fadeVolume(from: 0, to: targetVolume, duration: settings.fadeInDuration)
                 } else {
                     let currentVolume = try await musicController.currentVolume()
@@ -132,9 +151,11 @@ final class FlowSoundService {
                 guard !Task.isCancelled else { return }
                 pausedByFlowSound = false
                 restoreVolume = nil
+                FlowSoundDiagnostics.log("Apple Music restore completed")
                 transition(.restoreCompleted)
             } catch {
                 guard !Task.isCancelled else { return }
+                FlowSoundDiagnostics.log("Apple Music restore failed: \(error.localizedDescription)")
                 transition(.failed(error.localizedDescription))
             }
         }
@@ -152,12 +173,32 @@ final class FlowSoundService {
     }
 
     private func transition(_ event: DuckingEvent) {
+        let oldState = state
         state = stateMachine.send(event)
+        if oldState != state {
+            FlowSoundDiagnostics.log("state transition: \(oldState.label) -> \(state.label)")
+        }
     }
 }
 
 enum FlowSoundConstants {
     static let fadeStepDuration: TimeInterval = 0.1
-    static let monitorQuietReleaseDuration: TimeInterval = 0.25
+    static let activeCandidateResetDuration: TimeInterval = 0.75
+    static let monitorQuietReleaseDuration: TimeInterval = 1.25
     static let defaultRestoreVolume = 50
+}
+
+private extension MusicPlaybackState {
+    var label: String {
+        switch self {
+        case .playing:
+            "playing"
+        case .paused:
+            "paused"
+        case .stopped:
+            "stopped"
+        case .unknown(let value):
+            value.isEmpty ? "unknown" : "unknown(\(value))"
+        }
+    }
 }

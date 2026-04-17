@@ -17,16 +17,16 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.7.0</string>
+    <string>0.10.2</string>
     <key>CFBundleVersion</key>
-    <string>0.7.0</string>
+    <string>0.10.2</string>
     <key>LSMinimumSystemVersion</key>
     <string>26.0</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSAppleEventsUsageDescription</key>
-    <string>FlowSound controls Apple Music playback and volume when watched apps play audio.</string>
+    <string>FlowSound controls Apple Music playback and volume when other apps play audio.</string>
     <key>NSAudioCaptureUsageDescription</key>
-    <string>FlowSound listens to selected apps' system audio output to pause and restore background music.</string>
+    <string>FlowSound listens to other apps' system audio output to pause and restore background music.</string>
 </dict>
 </plist>

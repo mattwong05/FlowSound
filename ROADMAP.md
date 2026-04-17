@@ -48,6 +48,25 @@
 
 ## 0.8.x Reliability
 
+- Expand Safari watching to include WebKit audio helper processes.
+- Add process-output fallback diagnostics for watched apps.
+
+## 0.9.x Monitoring Modes
+
+- Add all-apps-except-Apple-Music monitoring mode.
+- Keep watched-app-only mode for stricter filtering.
+- Tune default timing values for smoother duck and restore behavior.
+- Reduce fallback detector active/quiet thrashing.
+
+## 0.10.x Notification Filtering
+
+- Add excluded bundle identifiers for all-apps monitoring mode.
+- Add default exclusions for common system notification services.
+- Keep process-output fallback diagnostic-only in all-apps mode.
+- Stabilize launch-at-login registration behavior for local app builds.
+
+## 0.11.x Reliability
+
 - Harden macOS 26 menu bar visibility with a signed Xcode app bundle and installed-app testing.
 - Improve permission onboarding.
 - Add recovery actions for denied permissions or failed Music automation.

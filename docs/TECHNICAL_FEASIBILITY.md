@@ -6,7 +6,7 @@ FlowSound is technically feasible as a native macOS 26+ app.
 
 The strongest implementation path is:
 
-1. Use Core Audio process taps to detect outgoing audio from whitelisted apps.
+1. Use Core Audio process taps to detect outgoing audio from all non-Apple Music apps by default.
 2. Use a small signal detector to confirm sustained audio activity.
 3. Use AppleScript as a narrow Apple Music control bridge.
 4. Use a state machine to coordinate fade-out, pause, quiet detection, resume, and fade-in.
@@ -19,14 +19,14 @@ This keeps the hard real-time audio work inside Core Audio and keeps Apple Music
 
 Apple documents Core Audio taps as a way to capture outgoing audio from a process or group of processes. A tap can be configured through `CATapDescription`, including process-based capture and mixdown settings.
 
-For FlowSound, the watcher can create process taps for whitelisted apps, read sample buffers through an aggregate device input path, and compute audio activity from the captured samples.
+For FlowSound, the watcher can create process taps for all apps except Apple Music, FlowSound, and excluded notification services, or for whitelisted apps in watched-app-only mode, read sample buffers through an aggregate device input path, and compute audio activity from the captured samples.
 
 Recommended first detector:
 
 - Convert the buffer to a normalized floating-point stream.
 - Compute RMS over short windows, for example 50 ms to 100 ms.
-- Mark an app as audible only when RMS remains above the configured threshold for 0.5 seconds.
-- Mark the system as quiet only when all watched apps remain below threshold for 5 seconds.
+- Mark app audio as audible only when RMS remains above the configured threshold for 1 second.
+- Mark the system as quiet only when matching apps remain below threshold for the configured quiet duration, currently 3 seconds by default.
 
 ### Controlling Apple Music
 
@@ -48,6 +48,10 @@ A one-click enable/disable switch is straightforward with a menu bar app. Disabl
 - Cancel timers.
 - Cancel in-progress fade operations.
 - Avoid automatically resuming Music unless FlowSound paused it and the user explicitly chooses that behavior.
+
+### Launch at Login
+
+FlowSound can use `SMAppService.mainApp` for launch-at-login registration. Local app bundles may report `notFound` before registration and `requiresApproval` after registration. FlowSound should treat `notFound` as registrable, avoid repeated registration while approval is pending, and validate final behavior with a signed and installed app bundle.
 
 ## Main Risks
 
@@ -73,7 +77,10 @@ Notification sounds from Telegram or short UI sounds can trigger the detector if
 
 Mitigation:
 
-- Require sustained audio for 0.5 seconds.
+- Require sustained audio for 1 second.
+- Allow short low-RMS gaps before resetting the active candidate.
+- Exclude common system notification services in all-apps mode.
+- Expand Safari to WebKit helper bundle identifiers because website audio may not originate from the Safari main process.
 - Use per-app thresholds later if needed.
 - Allow users to tune the active threshold and active duration.
 
@@ -91,7 +98,8 @@ Mitigation:
 
 Build the first version as a local native app with:
 
-- Safari and Telegram whitelist.
+- All-apps-except-Apple-Music monitoring mode.
+- Safari and Telegram watched-app-only fallback whitelist.
 - Fixed defaults for thresholds and fades.
 - Menu bar enable/disable.
 - Visible status: disabled, listening, ducking, paused by FlowSound, restoring, permission needed.
@@ -101,9 +109,9 @@ Do not include advanced UI, per-app configuration, launch-at-login, or distribut
 
 ## Current Implementation Status
 
-Version 0.7.x contains the native menu bar shell, default activation on launch, active and deactivated menu bar icons, Core Audio process tap monitoring, RMS activity detection, state machine, Apple Music automation adapter, app bundle packaging, logo assets, app icon, preferences window, editable watched app whitelist, launch-at-login control, and manual audio activity simulation.
+Version 0.10.x contains the native menu bar shell, default activation on launch, active and deactivated menu bar icons, Core Audio process tap monitoring, all-apps-except-Apple-Music monitoring mode, excluded notification services, watched-app-only mode, Safari WebKit helper expansion, process-output fallback diagnostics, RMS activity detection, state machine, Apple Music automation adapter, app bundle packaging, logo assets, app icon, preferences window, editable watched app whitelist, launch-at-login control, and manual audio activity simulation.
 
-This means the current build can validate system audio capture permission prompts, Apple Music permission prompts, fade behavior, pause/resume behavior, menu controls, state transitions, default Safari / Telegram audio detection, and custom watched app bundle identifiers.
+This means the current build can validate system audio capture permission prompts, Apple Music permission prompts, fade behavior, pause/resume behavior, menu controls, state transitions, all-apps monitoring, default Safari / Telegram watched-app-only detection, and custom watched app bundle identifiers.
 
 macOS 26 menu bar behavior needs explicit hardening. Development builds launched from `.build/FlowSound.app` may not appear in System Settings > Menu Bar > Allow in the Menu Bar even when the app process is running and an `NSStatusItem` is created. Release validation should include an installed, signed app bundle and a fresh user account.
 

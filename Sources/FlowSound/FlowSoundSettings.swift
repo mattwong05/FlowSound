@@ -1,7 +1,23 @@
 import Foundation
 
+enum AudioMonitoringMode: String, Sendable, Equatable, CaseIterable {
+    case allNonMusic
+    case watchedApps
+
+    var label: String {
+        switch self {
+        case .allNonMusic:
+            "All apps except Apple Music"
+        case .watchedApps:
+            "Only watched apps"
+        }
+    }
+}
+
 struct FlowSoundSettings: Sendable, Equatable {
+    var monitoringMode: AudioMonitoringMode
     var watchedBundleIdentifiers: [String]
+    var excludedBundleIdentifiers: [String]
     var activeThreshold: Double
     var activeDuration: TimeInterval
     var quietDuration: TimeInterval
@@ -10,17 +26,37 @@ struct FlowSoundSettings: Sendable, Equatable {
     var showsMenuBarText: Bool
 
     static let defaults = FlowSoundSettings(
+        monitoringMode: .allNonMusic,
         watchedBundleIdentifiers: [
             "com.apple.Safari",
             "ru.keepcoder.Telegram"
         ],
+        excludedBundleIdentifiers: [
+            "com.apple.Music",
+            "com.apple.iTunes",
+            "com.flowsound.FlowSound",
+            "com.apple.usernoted",
+            "com.apple.notificationcenterui"
+        ],
         activeThreshold: 0.02,
-        activeDuration: 0.5,
-        quietDuration: 5.0,
-        fadeOutDuration: 3.0,
-        fadeInDuration: 3.0,
+        activeDuration: 1.0,
+        quietDuration: 3.0,
+        fadeOutDuration: 2.0,
+        fadeInDuration: 2.0,
         showsMenuBarText: true
     )
+
+    static let safariAudioBundleIdentifiers = [
+        "com.apple.Safari",
+        "com.apple.WebKit.GPU",
+        "com.apple.WebKit.WebContent",
+        "com.apple.WebKit.Networking",
+        "com.apple.SafariPlatformSupport.Helper"
+    ]
+
+    static var defaultExcludedBundleIdentifiers: [String] {
+        defaults.excludedBundleIdentifiers
+    }
 
     static func bundleIdentifiers(fromText text: String) -> [String] {
         normalizedBundleIdentifiers(
@@ -50,6 +86,26 @@ struct FlowSoundSettings: Sendable, Equatable {
         return normalized.isEmpty ? defaults.watchedBundleIdentifiers : normalized
     }
 
+    static func validExcludedBundleIdentifiers(_ identifiers: [String]) -> [String] {
+        let normalized = normalizedBundleIdentifiers(identifiers)
+        return normalized.isEmpty ? defaults.excludedBundleIdentifiers : normalized
+    }
+
+    static func expandedWatchedBundleIdentifiers(_ identifiers: [String]) -> [String] {
+        let validIdentifiers = validWatchedBundleIdentifiers(identifiers)
+        var expanded: [String] = []
+
+        for identifier in validIdentifiers {
+            if identifier == "com.apple.Safari" {
+                expanded.append(contentsOf: safariAudioBundleIdentifiers)
+            } else {
+                expanded.append(identifier)
+            }
+        }
+
+        return normalizedBundleIdentifiers(expanded)
+    }
+
     private static func isValidBundleIdentifier(_ identifier: String) -> Bool {
         guard identifier.contains("."),
               !identifier.hasPrefix("."),
@@ -77,7 +133,10 @@ final class FlowSoundSettingsStore {
     private let defaults: UserDefaults
 
     private enum Key {
+        static let settingsSchemaVersion = "settingsSchemaVersion"
+        static let monitoringMode = "monitoringMode"
         static let watchedBundleIdentifiers = "watchedBundleIdentifiers"
+        static let excludedBundleIdentifiers = "excludedBundleIdentifiers"
         static let activeThreshold = "activeThreshold"
         static let activeDuration = "activeDuration"
         static let quietDuration = "quietDuration"
@@ -86,16 +145,29 @@ final class FlowSoundSettingsStore {
         static let showsMenuBarText = "showsMenuBarText"
     }
 
+    private enum Schema {
+        static let currentVersion = 1
+        static let previousActiveDuration = 0.5
+        static let previousQuietDuration = 5.0
+        static let previousFadeOutDuration = 3.0
+        static let previousFadeInDuration = 3.0
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         registerDefaults()
+        migrateDefaultsIfNeeded()
     }
 
     var settings: FlowSoundSettings {
         get {
             FlowSoundSettings(
+                monitoringMode: AudioMonitoringMode(rawValue: defaults.string(forKey: Key.monitoringMode) ?? "") ?? FlowSoundSettings.defaults.monitoringMode,
                 watchedBundleIdentifiers: FlowSoundSettings.validWatchedBundleIdentifiers(
                     defaults.stringArray(forKey: Key.watchedBundleIdentifiers) ?? FlowSoundSettings.defaults.watchedBundleIdentifiers
+                ),
+                excludedBundleIdentifiers: FlowSoundSettings.validExcludedBundleIdentifiers(
+                    defaults.stringArray(forKey: Key.excludedBundleIdentifiers) ?? FlowSoundSettings.defaults.excludedBundleIdentifiers
                 ),
                 activeThreshold: defaults.double(forKey: Key.activeThreshold),
                 activeDuration: defaults.double(forKey: Key.activeDuration),
@@ -108,9 +180,15 @@ final class FlowSoundSettingsStore {
         set {
             var savedSettings = newValue
             savedSettings.watchedBundleIdentifiers = FlowSoundSettings.validWatchedBundleIdentifiers(newValue.watchedBundleIdentifiers)
+            savedSettings.excludedBundleIdentifiers = FlowSoundSettings.validExcludedBundleIdentifiers(newValue.excludedBundleIdentifiers)
+            defaults.set(savedSettings.monitoringMode.rawValue, forKey: Key.monitoringMode)
             defaults.set(
                 savedSettings.watchedBundleIdentifiers,
                 forKey: Key.watchedBundleIdentifiers
+            )
+            defaults.set(
+                savedSettings.excludedBundleIdentifiers,
+                forKey: Key.excludedBundleIdentifiers
             )
             defaults.set(savedSettings.activeThreshold, forKey: Key.activeThreshold)
             defaults.set(savedSettings.activeDuration, forKey: Key.activeDuration)
@@ -128,7 +206,9 @@ final class FlowSoundSettingsStore {
 
     private func registerDefaults() {
         defaults.register(defaults: [
+            Key.monitoringMode: FlowSoundSettings.defaults.monitoringMode.rawValue,
             Key.watchedBundleIdentifiers: FlowSoundSettings.defaults.watchedBundleIdentifiers,
+            Key.excludedBundleIdentifiers: FlowSoundSettings.defaults.excludedBundleIdentifiers,
             Key.activeThreshold: FlowSoundSettings.defaults.activeThreshold,
             Key.activeDuration: FlowSoundSettings.defaults.activeDuration,
             Key.quietDuration: FlowSoundSettings.defaults.quietDuration,
@@ -136,5 +216,40 @@ final class FlowSoundSettingsStore {
             Key.fadeInDuration: FlowSoundSettings.defaults.fadeInDuration,
             Key.showsMenuBarText: FlowSoundSettings.defaults.showsMenuBarText
         ])
+    }
+
+    private func migrateDefaultsIfNeeded() {
+        guard defaults.integer(forKey: Key.settingsSchemaVersion) < Schema.currentVersion else { return }
+
+        replaceIfOldDefault(
+            key: Key.activeDuration,
+            oldValue: Schema.previousActiveDuration,
+            newValue: FlowSoundSettings.defaults.activeDuration
+        )
+        replaceIfOldDefault(
+            key: Key.quietDuration,
+            oldValue: Schema.previousQuietDuration,
+            newValue: FlowSoundSettings.defaults.quietDuration
+        )
+        replaceIfOldDefault(
+            key: Key.fadeOutDuration,
+            oldValue: Schema.previousFadeOutDuration,
+            newValue: FlowSoundSettings.defaults.fadeOutDuration
+        )
+        replaceIfOldDefault(
+            key: Key.fadeInDuration,
+            oldValue: Schema.previousFadeInDuration,
+            newValue: FlowSoundSettings.defaults.fadeInDuration
+        )
+        defaults.set(Schema.currentVersion, forKey: Key.settingsSchemaVersion)
+    }
+
+    private func replaceIfOldDefault(key: String, oldValue: Double, newValue: Double) {
+        guard defaults.object(forKey: key) != nil,
+              abs(defaults.double(forKey: key) - oldValue) < 0.0001
+        else {
+            return
+        }
+        defaults.set(newValue, forKey: key)
     }
 }

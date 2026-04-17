@@ -31,6 +31,7 @@ enum DuckingEvent: Sendable, Equatable {
     case disable
     case watchedAudioStarted
     case watchedAudioStopped
+    case duckSkipped
     case duckCompleted
     case restoreCompleted
     case failed(String)
@@ -49,6 +50,8 @@ struct DuckingStateMachine: Sendable {
             state = .ducking
         case (.ducking, .watchedAudioStopped):
             state = .restoring
+        case (.ducking, .duckSkipped):
+            state = .listening
         case (.ducking, .duckCompleted):
             state = .pausedByFlowSound
         case (.pausedByFlowSound, .watchedAudioStopped):
