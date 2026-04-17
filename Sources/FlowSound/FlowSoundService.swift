@@ -158,5 +158,6 @@ final class FlowSoundService {
 
 enum FlowSoundConstants {
     static let fadeStepDuration: TimeInterval = 0.1
+    static let monitorQuietReleaseDuration: TimeInterval = 0.25
     static let defaultRestoreVolume = 50
 }

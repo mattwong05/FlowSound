@@ -12,7 +12,7 @@ final class FlowSoundApp: NSObject, NSApplicationDelegate {
 
         let settings = settingsStore.settings
         let musicController = AppleScriptMusicController()
-        let activityMonitor = ManualAudioActivityMonitor()
+        let activityMonitor = CoreAudioProcessTapMonitor()
         let flowSoundService = FlowSoundService(
             settings: settings,
             musicController: musicController,

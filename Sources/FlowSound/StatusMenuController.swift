@@ -3,7 +3,7 @@ import AppKit
 @MainActor
 final class StatusMenuController {
     private let service: FlowSoundService
-    private let activityMonitor: ManualAudioActivityMonitor
+    private let activityMonitor: SimulatableAudioActivityMonitor
     private let settingsStore: FlowSoundSettingsStore
     private let statusItem = NSStatusBar.system.statusItem(withLength: 116)
     private let menu = NSMenu()
@@ -21,7 +21,7 @@ final class StatusMenuController {
 
     init(
         service: FlowSoundService,
-        activityMonitor: ManualAudioActivityMonitor,
+        activityMonitor: SimulatableAudioActivityMonitor,
         settingsStore: FlowSoundSettingsStore
     ) {
         self.service = service

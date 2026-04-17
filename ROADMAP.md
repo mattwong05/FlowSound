@@ -29,22 +29,28 @@
 
 ## 0.5.x Audio Detection
 
-- Harden macOS 26 menu bar visibility with a signed Xcode app bundle and installed-app testing.
 - Implement Core Audio process tap monitor behind `AudioActivityMonitor`.
 - Implement RMS-based audio activity detection.
 - Add tests for threshold timing and quiet-window timing.
 - Add manual test checklist.
 
-## 0.6.x Configuration
+## 0.6.x Login and Preferences Polish
+
+- Add launch-at-login control through `SMAppService`.
+- Add Preferences checkbox for launch-at-login.
+- Fix Preferences form spacing.
+
+## 0.7.x Configuration
 
 - Add editable whitelist by app bundle identifier.
 - Add status and diagnostics view.
 
-## 0.7.x Reliability
+## 0.8.x Reliability
 
+- Harden macOS 26 menu bar visibility with a signed Xcode app bundle and installed-app testing.
 - Improve permission onboarding.
 - Add recovery actions for denied permissions or failed Music automation.
-- Add launch-at-login option.
+- Validate launch-at-login behavior in a signed and installed app.
 - Add structured local logging.
 
 ## 1.0.0 Release Candidate

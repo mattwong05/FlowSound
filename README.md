@@ -12,16 +12,17 @@ The current build is a native Swift menu bar app with:
 - A tested ducking state machine.
 - Apple Music control through AppleScript and `osascript`.
 - Fade-out, pause, play, and fade-in behavior.
-- Manual menu items to simulate watched audio and quiet periods while Core Audio process tap monitoring is implemented.
+- Core Audio process tap monitoring for Safari and Telegram through bundle ID-based taps.
+- Manual menu items to simulate watched audio and quiet periods for debugging.
 - Split logo assets generated from `FlowSound-iCon.png`, including dark-background, light-background, and menu bar template variants.
 - An About window that chooses the light or dark FlowSound logo artwork based on appearance.
-- A Preferences window for active threshold, active duration, quiet duration, fade-out duration, fade-in duration, and menu bar text visibility.
+- A Preferences window for active threshold, active duration, quiet duration, fade-out duration, fade-in duration, menu bar text visibility, and launch-at-login.
 - A generated `.icns` app icon bundled into `FlowSound.app`.
 - Default activation on launch, with manual Activate / Deactivate control from the menu bar.
 - Active and deactivated menu bar icons generated from the supplied icon artwork.
 - App bundle packaging with Apple Events and system audio capture usage descriptions.
 
-The automatic Core Audio process tap monitor is still the next implementation step. The app is structured so that monitor can replace the current manual test monitor without changing Apple Music control or state machine logic.
+The editable app whitelist is still pending. The current whitelist is fixed to Safari and Telegram.
 
 ## MVP Behavior
 
@@ -77,6 +78,8 @@ FlowSound will need:
 
 If App Sandbox is enabled, Apple Events control of Music must be tested carefully because sandboxing changes automation requirements.
 
+Launch at login uses `SMAppService.mainApp`. Apple documents that `SMAppService` apps must be code signed, so local debug builds may report that launch at login is unavailable or requires approval until the app is signed and installed like a normal app.
+
 ## Testing
 
 Run automated tests:
@@ -118,6 +121,7 @@ Open `Preferences...` from the menu bar menu to configure:
 - Fade-out duration.
 - Fade-in duration.
 - Whether the menu bar shows the `FlowSound` text label or only the icon.
+- Whether FlowSound launches at login.
 
 Recommended tests for the first implementation:
 

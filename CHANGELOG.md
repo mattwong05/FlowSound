@@ -14,6 +14,32 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.6.0] - 2026-04-18
+
+### Added
+
+- Added launch-at-login control using `SMAppService.mainApp`.
+- Added Preferences checkbox and status text for launch-at-login.
+- Added shortcut from Preferences to System Settings Login Items.
+
+### Changed
+
+- Reworked Preferences form layout to use fixed-height rows and avoid large spacing between fade settings.
+
+## [0.5.0] - 2026-04-18
+
+### Added
+
+- Added `CoreAudioProcessTapMonitor` using Core Audio process taps.
+- Added bundle ID-based audio capture for the fixed Safari and Telegram whitelist.
+- Added RMS-based activity detection with active duration and quiet release timing.
+- Added private aggregate device and IO proc setup for reading tap buffers.
+
+### Changed
+
+- Changed default audio monitoring from manual simulation to Core Audio process tap monitoring.
+- Moved Core Audio tap setup off the main AppKit thread.
+
 ## [0.4.0] - 2026-04-18
 
 ### Added

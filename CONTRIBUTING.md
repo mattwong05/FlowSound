@@ -33,6 +33,8 @@ Run the app:
 open .build/FlowSound.app
 ```
 
+Launch-at-login uses `SMAppService` and should be validated with a signed, installed app bundle before release. Local `.build/FlowSound.app` builds may report that login item registration requires approval or is unavailable.
+
 ## Development Rules
 
 - Keep business logic testable outside the menu bar UI.
