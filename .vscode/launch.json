@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:2026-FlowSound}",
+      "name": "Debug FlowSound",
+      "target": "FlowSound",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug FlowSound"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:2026-FlowSound}",
+      "name": "Release FlowSound",
+      "target": "FlowSound",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release FlowSound"
+    }
+  ]
+}

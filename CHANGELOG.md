@@ -14,6 +14,20 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.4.0] - 2026-04-18
+
+### Added
+
+- Added deactivated icon asset generation from `FlowSound-Deactivate-iCon.png`.
+- Added active and inactive menu bar template icons.
+- Added default service activation on app launch.
+
+### Changed
+
+- Changed menu bar toggle wording to Activate / Deactivate.
+- Changed menu bar icon rendering to follow the current activation state.
+- Changed state labels from listening / disabled to activated / deactivated for user-facing status.
+
 ## [0.3.0] - 2026-04-17
 
 ### Added

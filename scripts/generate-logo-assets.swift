@@ -13,6 +13,7 @@ enum AssetGeneratorError: Error {
 
 let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
 let sourceURL = root.appendingPathComponent("FlowSound-iCon.png")
+let deactivateSourceURL = root.appendingPathComponent("FlowSound-Deactivate-iCon.png")
 let outputDirectory = root.appendingPathComponent("Assets")
 
 guard FileManager.default.fileExists(atPath: sourceURL.path) else {
@@ -111,6 +112,38 @@ func makeTemplateMask(from image: CGImage) throws -> CGImage {
 
 let templateMask = try makeTemplateMask(from: glyphCrop)
 try write(templateMask, to: "FlowSoundMenuBarTemplate.png")
+try write(templateMask, to: "FlowSoundMenuBarActiveTemplate.png")
+
+if FileManager.default.fileExists(atPath: deactivateSourceURL.path) {
+    guard let deactivateImage = NSImage(contentsOf: deactivateSourceURL),
+          let deactivateCGImage = deactivateImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+        throw AssetGeneratorError.cannotLoadImage
+    }
+
+    let deactivateWidth = deactivateCGImage.width
+    let deactivateHeight = deactivateCGImage.height
+    let halfDeactivateWidth = deactivateWidth / 2
+    let deactivateLightBackground = try crop(
+        CGRect(x: 0, y: 0, width: halfDeactivateWidth, height: deactivateHeight),
+        from: deactivateCGImage
+    )
+    try write(deactivateLightBackground, to: "FlowSoundDeactivateLightBackground.png")
+
+    let deactivateDarkBackground = try crop(
+        CGRect(x: halfDeactivateWidth, y: 0, width: halfDeactivateWidth, height: deactivateHeight),
+        from: deactivateCGImage
+    )
+    try write(deactivateDarkBackground, to: "FlowSoundDeactivateDarkBackground.png")
+
+    // Left-half visual coordinates from FlowSound-Deactivate-iCon.png. This crop
+    // keeps the inactive wave-and-note glyph and excludes the surrounding canvas.
+    let deactivateGlyphCrop = try crop(
+        CGRect(x: 250, y: 360, width: 360, height: 190),
+        from: deactivateCGImage
+    )
+    let deactivateTemplateMask = try makeTemplateMask(from: deactivateGlyphCrop)
+    try write(deactivateTemplateMask, to: "FlowSoundMenuBarInactiveTemplate.png")
+}
 
 func makeAppIcon(from image: CGImage, size: Int) throws -> CGImage {
     guard let context = CGContext(

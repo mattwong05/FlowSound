@@ -101,7 +101,7 @@ Do not include advanced UI, per-app configuration, launch-at-login, or distribut
 
 ## Current Implementation Status
 
-Version 0.3.x contains the native menu bar shell, state machine, Apple Music automation adapter, app bundle packaging, logo assets, app icon, preferences window, and manual audio activity simulation. Automatic Core Audio process tap monitoring is intentionally still pending behind the `AudioActivityMonitor` protocol.
+Version 0.4.x contains the native menu bar shell, default activation on launch, active and deactivated menu bar icons, state machine, Apple Music automation adapter, app bundle packaging, logo assets, app icon, preferences window, and manual audio activity simulation. Automatic Core Audio process tap monitoring is intentionally still pending behind the `AudioActivityMonitor` protocol.
 
 This means the current build can validate Apple Music permission prompts, fade behavior, pause/resume behavior, menu controls, and state transitions before the lower-level audio capture implementation is added.
 

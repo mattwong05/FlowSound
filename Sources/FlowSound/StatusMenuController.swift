@@ -10,8 +10,8 @@ final class StatusMenuController {
     private let aboutWindowController = AboutWindowController()
     private let diagnosticsWindowController = StartupWindowController()
     private lazy var preferencesWindowController = PreferencesWindowController(settingsStore: settingsStore)
-    private let statusMenuItem = NSMenuItem(title: "Status: Disabled", action: nil, keyEquivalent: "")
-    private let toggleMenuItem = NSMenuItem(title: "Enable FlowSound", action: #selector(toggleEnabled), keyEquivalent: "")
+    private let statusMenuItem = NSMenuItem(title: "Status: Deactivated", action: nil, keyEquivalent: "")
+    private let toggleMenuItem = NSMenuItem(title: "Activate FlowSound", action: #selector(toggleEnabled), keyEquivalent: "")
     private let simulateActiveItem = NSMenuItem(title: "Simulate Watched Audio", action: #selector(simulateActive), keyEquivalent: "")
     private let simulateQuietItem = NSMenuItem(title: "Simulate Quiet", action: #selector(simulateQuiet), keyEquivalent: "")
     private let preferencesMenuItem = NSMenuItem(title: "Preferences...", action: #selector(showPreferences), keyEquivalent: ",")
@@ -59,18 +59,7 @@ final class StatusMenuController {
         button.imagePosition = .imageLeading
         button.toolTip = "FlowSound"
 
-        if let image = NSImage(named: "FlowSoundMenuBarTemplate") ?? loadBundledImage(named: "FlowSoundMenuBarTemplate") {
-            image.isTemplate = true
-            image.size = NSSize(width: 22, height: 16)
-            button.image = image
-            FlowSoundDiagnostics.log("loaded FlowSoundMenuBarTemplate status image")
-        } else if let image = NSImage(systemSymbolName: "music.note", accessibilityDescription: "FlowSound") {
-            image.isTemplate = true
-            button.image = image
-            FlowSoundDiagnostics.log("loaded music.note fallback status image")
-        } else {
-            FlowSoundDiagnostics.log("using text-only status item")
-        }
+        updateStatusIcon(for: service.state)
     }
 
     private func configureMenu() {
@@ -102,13 +91,14 @@ final class StatusMenuController {
     private func render(_ state: DuckingState) {
         FlowSoundDiagnostics.log("render state: \(state.label)")
         statusMenuItem.title = "Status: \(state.label)"
-        toggleMenuItem.title = state == .disabled ? "Enable FlowSound" : "Disable FlowSound"
+        toggleMenuItem.title = state == .disabled ? "Activate FlowSound" : "Deactivate FlowSound"
         simulateActiveItem.isEnabled = state != .disabled
         simulateQuietItem.isEnabled = state != .disabled
 
         if let button = statusItem.button {
             button.toolTip = "FlowSound: \(state.label)"
         }
+        updateStatusIcon(for: state)
     }
 
     @objc private func toggleEnabled() {
@@ -154,5 +144,28 @@ final class StatusMenuController {
             return nil
         }
         return NSImage(contentsOf: url)
+    }
+
+    private func updateStatusIcon(for state: DuckingState) {
+        let resourceName = state == .disabled ? "FlowSoundMenuBarInactiveTemplate" : "FlowSoundMenuBarActiveTemplate"
+        guard let button = statusItem.button else { return }
+
+        if let image = NSImage(named: resourceName) ?? loadBundledImage(named: resourceName) {
+            image.isTemplate = true
+            image.size = NSSize(width: 22, height: 16)
+            button.image = image
+            FlowSoundDiagnostics.log("loaded \(resourceName) status image")
+        } else if let legacyImage = NSImage(named: "FlowSoundMenuBarTemplate") ?? loadBundledImage(named: "FlowSoundMenuBarTemplate") {
+            legacyImage.isTemplate = true
+            legacyImage.size = NSSize(width: 22, height: 16)
+            button.image = legacyImage
+            FlowSoundDiagnostics.log("loaded legacy FlowSoundMenuBarTemplate status image")
+        } else if let image = NSImage(systemSymbolName: "music.note", accessibilityDescription: "FlowSound") {
+            image.isTemplate = true
+            button.image = image
+            FlowSoundDiagnostics.log("loaded music.note fallback status image")
+        } else {
+            FlowSoundDiagnostics.log("using text-only status item")
+        }
     }
 }

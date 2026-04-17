@@ -31,6 +31,8 @@ final class FlowSoundApp: NSObject, NSApplicationDelegate {
             controller?.applySettings(settings)
         }
         controller.install()
+        flowSoundService.enable()
+        FlowSoundDiagnostics.log("service activated by default on launch")
         FlowSoundDiagnostics.log("status controller installed")
     }
 

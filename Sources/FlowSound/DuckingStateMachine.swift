@@ -11,9 +11,9 @@ enum DuckingState: Sendable, Equatable {
     var label: String {
         switch self {
         case .disabled:
-            "Disabled"
+            "Deactivated"
         case .listening:
-            "Listening"
+            "Activated"
         case .ducking:
             "Ducking Apple Music"
         case .pausedByFlowSound:

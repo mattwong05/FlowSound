@@ -21,7 +21,13 @@
 - Add generated app icon.
 - Add appearance-aware About logo.
 
-## 0.4.x Audio Detection
+## 0.4.x Activation State Icons
+
+- Start FlowSound activated by default on launch.
+- Add active and deactivated menu bar icon states.
+- Generate deactivated assets from `FlowSound-Deactivate-iCon.png`.
+
+## 0.5.x Audio Detection
 
 - Harden macOS 26 menu bar visibility with a signed Xcode app bundle and installed-app testing.
 - Implement Core Audio process tap monitor behind `AudioActivityMonitor`.
@@ -29,12 +35,12 @@
 - Add tests for threshold timing and quiet-window timing.
 - Add manual test checklist.
 
-## 0.5.x Configuration
+## 0.6.x Configuration
 
 - Add editable whitelist by app bundle identifier.
 - Add status and diagnostics view.
 
-## 0.6.x Reliability
+## 0.7.x Reliability
 
 - Improve permission onboarding.
 - Add recovery actions for denied permissions or failed Music automation.

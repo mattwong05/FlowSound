@@ -17,6 +17,8 @@ The current build is a native Swift menu bar app with:
 - An About window that chooses the light or dark FlowSound logo artwork based on appearance.
 - A Preferences window for active threshold, active duration, quiet duration, fade-out duration, fade-in duration, and menu bar text visibility.
 - A generated `.icns` app icon bundled into `FlowSound.app`.
+- Default activation on launch, with manual Activate / Deactivate control from the menu bar.
+- Active and deactivated menu bar icons generated from the supplied icon artwork.
 - App bundle packaging with Apple Events and system audio capture usage descriptions.
 
 The automatic Core Audio process tap monitor is still the next implementation step. The app is structured so that monitor can replace the current manual test monitor without changing Apple Music control or state machine logic.
@@ -30,6 +32,7 @@ The automatic Core Audio process tap monitor is still the next implementation st
 - Resume Apple Music after 5 seconds of quiet.
 - Fade Apple Music volume back to the volume captured before ducking.
 - Provide a one-click menu bar toggle to enable or disable the service.
+- Start activated when the app launches.
 
 ## Technical Approach
 
@@ -99,7 +102,9 @@ cat ~/Library/Logs/FlowSound/FlowSound.log
 
 On macOS 26, System Settings > Menu Bar > Allow in the Menu Bar is not a reliable way to discover this development build. FlowSound is currently launched from `.build/FlowSound.app`, is not installed as a login item, and is not packaged as a signed release app. The app should still create an `NSStatusItem` while running, but the settings list may not include it.
 
-The menu bar icon uses a generated transparent template asset extracted from the wave-and-note glyph. macOS tints this asset automatically for light and dark menu bars. The source `FlowSound-iCon.png` is also split into `Assets/FlowSoundLogoDarkBackground.png` and `Assets/FlowSoundLogoLightBackground.png`; keep the full wordmark for About, marketing, or installer screens.
+The menu bar icon uses generated transparent template assets extracted from the wave-and-note glyphs. macOS tints these assets automatically for light and dark menu bars. The activated icon comes from `FlowSound-iCon.png`; the deactivated icon comes from `FlowSound-Deactivate-iCon.png`.
+
+The source `FlowSound-iCon.png` is also split into `Assets/FlowSoundLogoDarkBackground.png` and `Assets/FlowSoundLogoLightBackground.png`; keep the full wordmark for About, marketing, or installer screens. The source `FlowSound-Deactivate-iCon.png` is split into `Assets/FlowSoundDeactivateLightBackground.png` and `Assets/FlowSoundDeactivateDarkBackground.png`.
 
 The app icon is generated as `Assets/FlowSound.icns` during packaging and copied into the app bundle. Finder may cache app icons; if the app icon still looks blank after rebuilding, rename or move the rebuilt `.app`, or relaunch Finder.
 
