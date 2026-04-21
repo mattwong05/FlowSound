@@ -14,6 +14,12 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.10.3] - 2026-04-21
+
+### Fixed
+
+- Fixed interrupted restore flows overwriting the saved Apple Music restore volume with an in-progress fade volume such as `0`.
+
 ## [0.10.2] - 2026-04-18
 
 ### Fixed

@@ -36,6 +36,7 @@ The default monitoring mode listens to all app audio except Apple Music, FlowSou
 - Pause Apple Music after the fade-out completes.
 - Resume Apple Music after 3 seconds of quiet.
 - Fade Apple Music volume back to the volume captured before ducking.
+- Preserve the captured restore volume if restoring is interrupted by new app audio.
 - Skip ducking and restoring when Apple Music is not already playing.
 - Provide a one-click menu bar toggle to enable or disable the service.
 - Start activated when the app launches.
@@ -144,6 +145,8 @@ FlowSound does not poll audio volume every 0.1 seconds. Core Audio pushes captur
 A 0.1 second timer checks whether the current active signal has gone quiet. Brief low-RMS buffers do not reset the active candidate immediately; FlowSound allows a 0.75 second gap so normal video/music dynamics can still satisfy the 1 second active duration. A separate 0.5 second process-output poll is used for diagnostics, and as a fallback signal only in `Only watched apps` mode. In `All apps except Apple Music` mode, active and quiet decisions use the RMS tap so stale WebKit process-output state does not stretch the quiet duration.
 
 Launch-at-login registration is only attempted when macOS reports FlowSound as not registered. If System Settings already shows a pending approval state, saving Preferences again will not register another login item.
+
+When new app audio interrupts a restore, FlowSound preserves the original restore volume and fades down from Apple Music's current in-progress volume. This prevents a partial fade, including a temporary volume of `0`, from becoming the next restore target.
 
 Useful commands for finding bundle identifiers:
 

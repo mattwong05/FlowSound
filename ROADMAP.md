@@ -64,6 +64,7 @@
 - Add default exclusions for common system notification services.
 - Keep process-output fallback diagnostic-only in all-apps mode.
 - Stabilize launch-at-login registration behavior for local app builds.
+- Preserve Apple Music restore volume across interrupted duck/restore cycles.
 
 ## 0.11.x Reliability
 

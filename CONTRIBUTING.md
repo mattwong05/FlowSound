@@ -58,6 +58,7 @@ Before merging functional changes:
 - Manually test watched-app-only mode after changing the monitoring mode in Preferences.
 - Manually test a custom watched bundle identifier from Preferences, then reset defaults.
 - Save Preferences repeatedly while launch-at-login requires approval and confirm System Settings does not gain duplicate login items.
+- Interrupt a restore by starting watched audio again during fade-in, then confirm Apple Music eventually returns to the original pre-duck volume.
 - Confirm Apple Music does not resume when the user paused it manually.
 - Confirm FlowSound skips ducking when Apple Music is paused or stopped before watched audio starts.
 - Confirm disabling the service cancels active fades and timers.

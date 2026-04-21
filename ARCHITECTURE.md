@@ -87,7 +87,7 @@ Important rules:
 - Skip ducking when Music is paused or stopped before watched audio starts.
 - Cancel restore if watched audio becomes active again.
 - Cancel fade-in or fade-out when service is disabled.
-- Never overwrite the user's volume target after FlowSound has started restoring.
+- Never overwrite the user's captured restore volume during interrupted duck/restore cycles.
 
 ### SettingsStore
 

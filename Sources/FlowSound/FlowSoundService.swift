@@ -109,10 +109,14 @@ final class FlowSoundService {
                     transition(.duckSkipped)
                     return
                 }
-                let originalVolume = try await musicController.currentVolume()
-                restoreVolume = originalVolume
-                FlowSoundDiagnostics.log("captured Apple Music volume \(originalVolume), fading out over \(settings.fadeOutDuration) seconds")
-                try await fadeVolume(from: originalVolume, to: 0, duration: settings.fadeOutDuration)
+                let currentVolume = try await musicController.currentVolume()
+                if let restoreVolume {
+                    FlowSoundDiagnostics.log("preserving Apple Music restore volume \(restoreVolume), fading out from \(currentVolume) over \(settings.fadeOutDuration) seconds")
+                } else {
+                    restoreVolume = currentVolume
+                    FlowSoundDiagnostics.log("captured Apple Music volume \(currentVolume), fading out over \(settings.fadeOutDuration) seconds")
+                }
+                try await fadeVolume(from: currentVolume, to: 0, duration: settings.fadeOutDuration)
                 guard !Task.isCancelled else { return }
                 try await musicController.pause()
                 pausedByFlowSound = true

@@ -69,6 +69,7 @@ Mitigation:
 - Retry only where safe.
 - Surface permission errors in the menu.
 - Preserve the user's last known target volume.
+- Keep the captured restore target stable when restore is interrupted by new app audio.
 - Do not force resume if FlowSound did not pause Music.
 
 ### False Positives
