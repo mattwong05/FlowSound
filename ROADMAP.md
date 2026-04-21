@@ -73,6 +73,7 @@
 - Add recovery actions for denied permissions or failed Music automation.
 - Validate launch-at-login behavior in a signed and installed app.
 - Add structured local logging.
+- Add public release packaging, checksums, privacy documentation, and GitHub Actions release workflow.
 
 ## 1.0.0 Release Candidate
 

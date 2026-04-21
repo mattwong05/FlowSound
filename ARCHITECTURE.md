@@ -148,6 +148,18 @@ The menu bar icon uses transparent template assets so macOS can tint them for li
 
 The app bundle icon uses the generated `.icns` file declared through `CFBundleIconFile`.
 
+### Release Packaging
+
+`scripts/package-release.sh` builds a release app bundle, optionally signs and notarizes it, packages it as a zip archive, and writes a SHA-256 checksum file.
+
+Release packaging responsibilities:
+
+- Use `scripts/build-app.sh release` as the app bundle source.
+- Keep unsigned development archives possible for testers.
+- Use Developer ID signing and notarization when release credentials are available.
+- Publish `FlowSound-<version>.zip` and `SHA256SUMS.txt`.
+- Keep release notes explicit about macOS 26+, Apple Music-only behavior, and required permissions.
+
 ## Default Configuration
 
 - Monitoring mode: all apps except Apple Music.

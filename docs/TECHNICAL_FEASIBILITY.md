@@ -110,11 +110,13 @@ Do not include advanced UI, per-app configuration, launch-at-login, or distribut
 
 ## Current Implementation Status
 
-Version 0.10.x contains the native menu bar shell, default activation on launch, active and deactivated menu bar icons, Core Audio process tap monitoring, all-apps-except-Apple-Music monitoring mode, excluded notification services, watched-app-only mode, Safari WebKit helper expansion, process-output fallback diagnostics, RMS activity detection, state machine, Apple Music automation adapter, app bundle packaging, logo assets, app icon, preferences window, editable watched app whitelist, launch-at-login control, and manual audio activity simulation.
+Version 0.11.x contains the native menu bar shell, default activation on launch, active and deactivated menu bar icons, Core Audio process tap monitoring, all-apps-except-Apple-Music monitoring mode, excluded notification services, watched-app-only mode, Safari WebKit helper expansion, process-output fallback diagnostics, RMS activity detection, state machine, Apple Music automation adapter, app bundle packaging, release archive packaging, checksums, logo assets, app icon, preferences window, editable watched app whitelist, launch-at-login control, and manual audio activity simulation.
 
 This means the current build can validate system audio capture permission prompts, Apple Music permission prompts, fade behavior, pause/resume behavior, menu controls, state transitions, all-apps monitoring, default Safari / Telegram watched-app-only detection, and custom watched app bundle identifiers.
 
 macOS 26 menu bar behavior needs explicit hardening. Development builds launched from `.build/FlowSound.app` may not appear in System Settings > Menu Bar > Allow in the Menu Bar even when the app process is running and an `NSStatusItem` is created. Release validation should include an installed, signed app bundle and a fresh user account.
+
+Public release validation should use a Developer ID Application certificate and Apple notarization. Unsigned release archives can still be useful for testers, but they should be labeled as unsigned and may require manual Gatekeeper approval.
 
 ## Feasibility Verdict
 

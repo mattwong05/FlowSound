@@ -14,6 +14,15 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.11.0] - 2026-04-21
+
+### Added
+
+- Added public install, privacy, and security documentation for open-source distribution.
+- Added release notes template for GitHub Releases.
+- Added release packaging script that builds a zip archive and SHA-256 checksum file, with optional Developer ID signing and notarization.
+- Added GitHub Actions release workflow for tagged builds and release artifact uploads.
+
 ## [0.10.3] - 2026-04-21
 
 ### Fixed

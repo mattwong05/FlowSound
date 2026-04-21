@@ -4,6 +4,32 @@ FlowSound is a macOS menu bar app that keeps Apple Music playing as background m
 
 The target platform is macOS 26+. The core APIs needed for the MVP are already available on modern macOS, including Core Audio process taps for outgoing process audio detection.
 
+## Download
+
+Public releases are published on GitHub:
+
+https://github.com/mattwong05/FlowSound/releases
+
+Download `FlowSound-<version>.zip` and `SHA256SUMS.txt`, then verify the archive:
+
+```sh
+shasum -a 256 -c SHA256SUMS.txt
+```
+
+See [INSTALL.md](INSTALL.md) for installation, first-run permissions, unsigned build notes, and uninstall steps.
+
+## Trust and Privacy
+
+FlowSound is open source and designed to be local-first:
+
+- No network feature.
+- No analytics.
+- No ads.
+- No audio uploads.
+- No saved captured audio.
+
+FlowSound detects whether other apps are producing audio, then controls Apple Music locally through Apple Events. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md) for details.
+
 ## Current Implementation
 
 The current build is a native Swift menu bar app with:
@@ -100,6 +126,15 @@ Build a local `.app` bundle:
 scripts/build-app.sh
 open .build/FlowSound.app
 ```
+
+Build a release archive and checksum:
+
+```sh
+scripts/package-release.sh
+ls dist/
+```
+
+Unsigned release archives are useful for development and testers. Public releases should be signed with a Developer ID Application certificate and notarized by Apple. A local `Apple Development` certificate is not enough for the normal public Gatekeeper experience.
 
 FlowSound is a menu bar app. It does not appear in the Dock and does not open a main window on launch. After opening it, look for the FlowSound glyph in the macOS menu bar.
 

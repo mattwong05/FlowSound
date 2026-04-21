@@ -74,6 +74,7 @@ Final responses must end with proposed commit lines and the files included in ea
 - Keep monitoring mode behavior explicit in settings and docs.
 - Keep excluded bundle identifier behavior explicit in settings and docs.
 - Keep known helper-process expansion explicit and documented.
+- Keep release packaging, signing, notarization, and checksum behavior documented.
 - Keep Apple Music automation isolated behind a `MusicController` boundary.
 - Treat audio capture and Apple Events permission failures as explicit app states.
 - Do not resume Apple Music unless FlowSound paused it.

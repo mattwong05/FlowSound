@@ -51,6 +51,7 @@ Allowed commit types:
 - Keep monitoring mode behavior explicit in settings and docs.
 - Keep excluded bundle identifier behavior explicit in settings and docs.
 - Keep known helper-process expansion explicit and documented.
+- Keep release packaging, signing, notarization, and checksum behavior documented.
 - Keep Apple Music automation isolated from product state.
 - Treat permission failures as explicit states.
 - Avoid silent behavior changes.

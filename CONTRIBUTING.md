@@ -27,6 +27,12 @@ Build a local app bundle:
 scripts/build-app.sh
 ```
 
+Build a release archive and checksum:
+
+```sh
+scripts/package-release.sh
+```
+
 Run the app:
 
 ```sh
@@ -34,6 +40,46 @@ open .build/FlowSound.app
 ```
 
 Launch-at-login uses `SMAppService` and should be validated with a signed, installed app bundle before release. Local `.build/FlowSound.app` builds may report `notFound` before registration or `requiresApproval` while macOS is waiting for user approval. Saving Preferences without changing the launch-at-login checkbox must not register another login item.
+
+## Release Process
+
+Release builds are created with `scripts/package-release.sh`.
+
+Default behavior:
+
+- Builds `FlowSound.app` with SwiftPM release configuration.
+- Creates `dist/FlowSound-<version>.zip`.
+- Creates `dist/SHA256SUMS.txt`.
+
+Optional signed and notarized behavior:
+
+- Set `SIGN_IDENTITY` to a Developer ID Application identity.
+- Set `NOTARIZE=1`.
+- Set `APPLE_ID`, `APPLE_TEAM_ID`, and `APPLE_APP_SPECIFIC_PASSWORD`.
+
+Example:
+
+```sh
+SIGN_IDENTITY="Developer ID Application: Example (TEAMID)" \
+NOTARIZE=1 \
+APPLE_ID="developer@example.com" \
+APPLE_TEAM_ID="TEAMID" \
+APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx" \
+scripts/package-release.sh
+```
+
+An `Apple Development` certificate is for local development and is not sufficient for public Developer ID distribution. Public releases should use a paid Apple Developer Program Developer ID Application certificate.
+
+GitHub Actions can build release artifacts from tags. Configure these repository secrets before enabling signed releases:
+
+- `DEVELOPER_ID_CERTIFICATE_BASE64`
+- `DEVELOPER_ID_CERTIFICATE_PASSWORD`
+- `DEVELOPER_ID_SIGN_IDENTITY`
+- `KEYCHAIN_PASSWORD`
+- `NOTARIZE_RELEASE`
+- `APPLE_ID`
+- `APPLE_TEAM_ID`
+- `APPLE_APP_SPECIFIC_PASSWORD`
 
 ## Development Rules
 
@@ -62,6 +108,7 @@ Before merging functional changes:
 - Confirm Apple Music does not resume when the user paused it manually.
 - Confirm FlowSound skips ducking when Apple Music is paused or stopped before watched audio starts.
 - Confirm disabling the service cancels active fades and timers.
+- For public releases, verify the zip checksum, install from `/Applications`, confirm Gatekeeper opens the app, confirm the app is notarized, and confirm first-run permission prompts are understandable.
 
 ## Versioning
 
