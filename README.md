@@ -12,7 +12,7 @@ The FlowSound landing page is designed for Cloudflare Pages:
 flowsound.youseminar.cn
 ```
 
-The static site lives in [`site/`](site/) and supports English and Simplified Chinese. It defaults to English unless the browser language starts with `zh`; users can switch languages manually.
+The static site lives in [`site/`](site/) and supports English and Simplified Chinese. It defaults to English unless the browser language starts with `zh`; users can switch languages manually. The hero explains the audio-focus workflow and includes a Product Hunt badge with light and dark variants.
 
 ## Download
 

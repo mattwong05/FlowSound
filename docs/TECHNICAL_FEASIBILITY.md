@@ -118,7 +118,7 @@ macOS 26 menu bar behavior needs explicit hardening. Development builds launched
 
 Public release validation should use a Developer ID Application certificate and Apple notarization. Unsigned release archives can still be useful for testers, but they should be ad-hoc signed for bundle integrity, labeled as unsigned, and may require manual Gatekeeper approval. CI release tests should avoid fixed timing assumptions for async service state transitions because hosted runners can be slower than local machines.
 
-The website is static and does not need a server. Cloudflare Pages can serve the `site/` directory directly with no build command.
+The website is static and does not need a server. Cloudflare Pages can serve the `site/` directory directly with no build command. The hero should keep the user pain point explicit: FlowSound prevents Apple Music and other app audio from overlapping, then restores music after other audio ends.
 
 ## Feasibility Verdict
 

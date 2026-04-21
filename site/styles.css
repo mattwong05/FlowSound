@@ -199,65 +199,100 @@ h1 {
 
 .hero-side {
   display: grid;
-  gap: 22px;
-  padding: 22px;
+  gap: 18px;
+  padding: clamp(22px, 4vw, 30px);
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
   box-shadow: 0 18px 48px var(--shadow);
 }
 
-.status-line {
+.hero-side-kicker {
+  margin: 0;
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.hero-side h2 {
+  margin: 0;
+  font-size: clamp(26px, 3vw, 38px);
+  line-height: 1.08;
+}
+
+.hero-side > p:not(.hero-side-kicker):not(.focus-outcome) {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.focus-flow {
   display: grid;
-  grid-template-columns: 14px 1fr auto;
-  gap: 10px;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.focus-flow li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+}
+
+.focus-flow span {
+  display: inline-flex;
   align-items: center;
-  min-height: 44px;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: var(--accent);
+  font-weight: 800;
+}
+
+.focus-flow strong {
+  display: block;
   font-size: 15px;
 }
 
-.status-line span {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--accent);
-}
-
-.status-line em {
-  color: var(--accent-strong);
-  font-style: normal;
-  font-weight: 700;
-}
-
-.level-rows {
-  display: grid;
-  gap: 18px;
-}
-
-.level-rows div {
-  display: grid;
-  gap: 8px;
-}
-
-.level-rows span {
+.focus-flow p {
+  margin: 5px 0 0;
   color: var(--muted);
   font-size: 14px;
+  line-height: 1.45;
 }
 
-meter {
-  width: 100%;
-  height: 16px;
+.focus-outcome {
+  margin: 0;
+  padding: 14px;
+  border-left: 3px solid var(--accent-warm);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent-warm) 12%, transparent);
+  font-weight: 700;
+  line-height: 1.45;
 }
 
-meter::-webkit-meter-bar {
-  background: var(--surface-strong);
-  border: 0;
-  border-radius: 8px;
+.product-hunt-badge {
+  min-height: 54px;
 }
 
-meter::-webkit-meter-optimum-value {
-  background: var(--accent-warm);
-  border-radius: 8px;
+.product-hunt-badge a {
+  display: inline-flex;
+}
+
+.product-hunt-badge img {
+  display: block;
+  width: 250px;
+  max-width: 100%;
+  height: auto;
 }
 
 .section {

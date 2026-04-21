@@ -14,6 +14,13 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.12.1] - 2026-04-22
+
+### Changed
+
+- Changed the website hero side panel to explain the Apple Music audio-focus workflow and user pain point more directly.
+- Added Product Hunt featured badge support with light and dark theme variants.
+
 ## [0.12.0] - 2026-04-22
 
 ### Added
