@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>FlowSound</title>
+    <meta
+      name="description"
+      content="FlowSound is a tiny open-source macOS menu bar app that auto-fades Apple Music when other apps play audio."
+    >
+    <meta property="og:title" content="FlowSound">
+    <meta
+      property="og:description"
+      content="A tiny open-source macOS menu bar app that auto-fades Apple Music when other apps play audio."
+    >
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="/assets/flowsound-logo-light.png">
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#" aria-label="FlowSound">
+        <picture>
+          <source srcset="/assets/flowsound-logo-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="/assets/flowsound-logo-light.png" alt="" width="160" height="88">
+        </picture>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a data-i18n="navDemo" href="#demo">Demo</a>
+        <a data-i18n="navPrivacy" href="#privacy">Privacy</a>
+        <a data-i18n="navPermissions" href="#permissions">Permissions</a>
+      </nav>
+      <div class="language-switch" aria-label="Language">
+        <button type="button" data-lang="en">EN</button>
+        <button type="button" data-lang="zh">中文</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow" data-i18n="eyebrow">Open-source macOS menu bar app</p>
+          <h1 data-i18n="heroTitle">Apple Music that knows when to step aside.</h1>
+          <p class="hero-text" data-i18n="heroText">
+            FlowSound fades and pauses Apple Music when other apps play audio, then restores it when things become quiet again.
+          </p>
+          <div class="actions">
+            <a class="button primary" data-i18n="download" href="https://github.com/mattwong05/FlowSound/releases/latest">
+              Download for macOS
+            </a>
+            <a class="button secondary" data-i18n="github" href="https://github.com/mattwong05/FlowSound">
+              View on GitHub
+            </a>
+          </div>
+          <p class="note" data-i18n="heroNote">
+            Built for macOS 26+. Apple Music only. Local-first, no analytics.
+          </p>
+        </div>
+        <div class="hero-side" aria-hidden="true">
+          <div class="status-line">
+            <span></span>
+            <strong>FlowSound</strong>
+            <em data-i18n="statusActive">Active</em>
+          </div>
+          <div class="level-rows">
+            <div><span>Apple Music</span><meter min="0" max="100" value="18"></meter></div>
+            <div><span>Other audio</span><meter min="0" max="100" value="82"></meter></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section video-section" id="demo">
+        <div class="section-heading">
+          <p class="eyebrow" data-i18n="demoEyebrow">Demo</p>
+          <h2 data-i18n="demoTitle">Watch FlowSound react to other audio.</h2>
+          <p data-i18n="demoText">
+            The menu bar app listens for app audio activity, fades Apple Music out, pauses it, then restores the previous volume.
+          </p>
+        </div>
+        <div class="video-wrap">
+          <iframe
+            src="https://www.youtube-nocookie.com/embed/0P0-hNjD0V0"
+            title="FlowSound demo"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen>
+          </iframe>
+        </div>
+      </section>
+
+      <section class="section trust-section" id="privacy">
+        <div class="section-heading">
+          <p class="eyebrow" data-i18n="trustEyebrow">Trust</p>
+          <h2 data-i18n="trustTitle">Simple, local, auditable.</h2>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <h3 data-i18n="simpleTitle">Simple</h3>
+            <p data-i18n="simpleText">Lives in the menu bar. Turn it on or off anytime.</p>
+          </article>
+          <article>
+            <h3 data-i18n="privateTitle">Private</h3>
+            <p data-i18n="privateText">No recording, no uploads, no analytics, no server.</p>
+          </article>
+          <article>
+            <h3 data-i18n="sourceTitle">Open source</h3>
+            <p data-i18n="sourceText">Built in Swift with Core Audio and Apple Music automation.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section permissions-section" id="permissions">
+        <div class="section-heading">
+          <p class="eyebrow" data-i18n="permissionsEyebrow">Permissions</p>
+          <h2 data-i18n="permissionsTitle">Why macOS asks for access.</h2>
+          <p data-i18n="permissionsText">
+            FlowSound needs a few local permissions to do one job. It does not use a network service.
+          </p>
+        </div>
+        <div class="permission-list">
+          <div>
+            <h3 data-i18n="audioTitle">Audio Capture</h3>
+            <p data-i18n="audioText">Used to detect whether other apps are producing audio.</p>
+          </div>
+          <div>
+            <h3 data-i18n="automationTitle">Automation</h3>
+            <p data-i18n="automationText">Used to control Apple Music volume and playback.</p>
+          </div>
+          <div>
+            <h3 data-i18n="loginTitle">Login Item</h3>
+            <p data-i18n="loginText">Optional, only if you enable Launch at Login.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section faq-section">
+        <div class="section-heading">
+          <p class="eyebrow" data-i18n="faqEyebrow">FAQ</p>
+          <h2 data-i18n="faqTitle">Small answers before you download.</h2>
+        </div>
+        <div class="faq-list">
+          <details>
+            <summary data-i18n="faqRecordQ">Does FlowSound record audio?</summary>
+            <p data-i18n="faqRecordA">No. FlowSound only computes local audio activity levels.</p>
+          </details>
+          <details>
+            <summary data-i18n="faqUploadQ">Does it upload anything?</summary>
+            <p data-i18n="faqUploadA">No. FlowSound has no analytics, no server, and no upload feature.</p>
+          </details>
+          <details>
+            <summary data-i18n="faqSpotifyQ">Does it work with Spotify?</summary>
+            <p data-i18n="faqSpotifyA">Not yet. FlowSound currently supports Apple Music only.</p>
+          </details>
+          <details>
+            <summary data-i18n="faqWarningQ">Why does macOS warn me when opening it?</summary>
+            <p data-i18n="faqWarningA">
+              Current builds are ad-hoc signed tester builds until a Developer ID notarized release is available.
+            </p>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>FlowSound</p>
+      <div>
+        <a data-i18n="footerPrivacy" href="https://github.com/mattwong05/FlowSound/blob/main/PRIVACY.md">Privacy</a>
+        <a data-i18n="footerSecurity" href="https://github.com/mattwong05/FlowSound/blob/main/SECURITY.md">Security</a>
+        <a data-i18n="footerGitHub" href="https://github.com/mattwong05/FlowSound">GitHub</a>
+      </div>
+    </footer>
+
+    <script src="/script.js"></script>
+  </body>
+</html>

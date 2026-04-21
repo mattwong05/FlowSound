@@ -75,6 +75,14 @@
 - Add structured local logging.
 - Add public release packaging, checksums, privacy documentation, and GitHub Actions release workflow.
 
+## 0.12.x Website
+
+- Add a simple public landing page.
+- Embed the demo video.
+- Explain permissions in plain language.
+- Support English and Simplified Chinese.
+- Deploy with Cloudflare Pages.
+
 ## 1.0.0 Release Candidate
 
 - Finalize signed and notarized distribution.

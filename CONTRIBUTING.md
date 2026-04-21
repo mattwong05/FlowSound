@@ -33,6 +33,13 @@ Build a release archive and checksum:
 scripts/package-release.sh
 ```
 
+Preview the static website:
+
+```sh
+cd site
+ruby -run -e httpd . -p 8080
+```
+
 Run the app:
 
 ```sh
@@ -81,6 +88,20 @@ GitHub Actions can build release artifacts from tags. Configure these repository
 - `APPLE_TEAM_ID`
 - `APPLE_APP_SPECIFIC_PASSWORD`
 
+## Website Deployment
+
+The landing page is a no-build static site in `site/`.
+
+Cloudflare Pages settings:
+
+- Framework preset: `None`
+- Build command: leave empty
+- Build output directory: `site`
+- Production branch: `main`
+- Recommended custom domain: `flowsound.youseminar.cn`
+
+Keep the landing page copy straightforward. The page should explain what FlowSound does, show the demo video, link to GitHub and downloads, and describe permissions clearly.
+
 ## Development Rules
 
 - Keep business logic testable outside the menu bar UI.
@@ -111,6 +132,7 @@ Before merging functional changes:
 - Confirm disabling the service cancels active fades and timers.
 - For public releases, verify the zip checksum, install from `/Applications`, confirm Gatekeeper opens the app, confirm the app is notarized, and confirm first-run permission prompts are understandable.
 - For unsigned tester releases, unzip the archive and run `codesign --verify --deep --strict --verbose=2 FlowSound.app` before publishing.
+- For website changes, test light mode, dark mode, English, Simplified Chinese, desktop width, and mobile width before deployment.
 
 ## Versioning
 

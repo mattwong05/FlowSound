@@ -4,6 +4,16 @@ FlowSound is a macOS menu bar app that keeps Apple Music playing as background m
 
 The target platform is macOS 26+. The core APIs needed for the MVP are already available on modern macOS, including Core Audio process taps for outgoing process audio detection.
 
+## Website
+
+The FlowSound landing page is designed for Cloudflare Pages:
+
+```text
+flowsound.youseminar.cn
+```
+
+The static site lives in [`site/`](site/) and supports English and Simplified Chinese. It defaults to English unless the browser language starts with `zh`; users can switch languages manually.
+
 ## Download
 
 Public releases are published on GitHub:

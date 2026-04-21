@@ -160,6 +160,19 @@ Release packaging responsibilities:
 - Publish `FlowSound-<version>.zip` and `SHA256SUMS.txt`.
 - Keep release notes explicit about macOS 26+, Apple Music-only behavior, and required permissions.
 
+### Website
+
+The public landing page lives in `site/` as a static Cloudflare Pages site.
+
+Responsibilities:
+
+- Present FlowSound clearly without marketing-heavy copy.
+- Embed the YouTube demo video.
+- Link to GitHub Releases and source code.
+- Explain audio capture, Automation, and Login Item permissions in direct language.
+- Support English and Simplified Chinese with browser-language detection and manual switching.
+- Support light and dark mode through `prefers-color-scheme`.
+
 ## Default Configuration
 
 - Monitoring mode: all apps except Apple Music.

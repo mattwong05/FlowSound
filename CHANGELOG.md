@@ -14,6 +14,15 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.12.0] - 2026-04-22
+
+### Added
+
+- Added a static one-page FlowSound landing page for Cloudflare Pages.
+- Added English and Simplified Chinese website copy with browser-language detection and manual language switching.
+- Added YouTube demo embed, download link, GitHub link, privacy notes, permission explanations, and FAQ sections.
+- Added Cloudflare Pages headers and deployment notes for the static website.
+
 ## [0.11.2] - 2026-04-21
 
 ### Fixed
