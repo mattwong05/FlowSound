@@ -12,6 +12,8 @@ Official releases should include:
 - Release notes that list supported macOS versions, Apple Music-only scope, and required permissions.
 - A linked GitHub Actions run for the release build.
 
+Unsigned tester builds should still be ad-hoc signed after the `.app` bundle is assembled so macOS can verify bundle integrity. Ad-hoc signing does not replace Developer ID signing or notarization.
+
 When a Developer ID certificate is available, public releases should also be:
 
 - Signed with a Developer ID Application certificate.

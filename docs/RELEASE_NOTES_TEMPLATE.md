@@ -44,5 +44,5 @@ See `INSTALL.md` for details.
 ## Known Limitations
 
 - FlowSound controls Apple Music only.
-- Unsigned builds may require manual Gatekeeper approval.
+- Unsigned builds are ad-hoc signed for bundle integrity but may still require manual Gatekeeper approval.
 - Launch at Login should be validated with signed and installed builds.

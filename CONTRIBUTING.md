@@ -110,6 +110,7 @@ Before merging functional changes:
 - Confirm FlowSound skips ducking when Apple Music is paused or stopped before watched audio starts.
 - Confirm disabling the service cancels active fades and timers.
 - For public releases, verify the zip checksum, install from `/Applications`, confirm Gatekeeper opens the app, confirm the app is notarized, and confirm first-run permission prompts are understandable.
+- For unsigned tester releases, unzip the archive and run `codesign --verify --deep --strict --verbose=2 FlowSound.app` before publishing.
 
 ## Versioning
 

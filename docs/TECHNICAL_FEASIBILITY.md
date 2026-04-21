@@ -116,7 +116,7 @@ This means the current build can validate system audio capture permission prompt
 
 macOS 26 menu bar behavior needs explicit hardening. Development builds launched from `.build/FlowSound.app` may not appear in System Settings > Menu Bar > Allow in the Menu Bar even when the app process is running and an `NSStatusItem` is created. Release validation should include an installed, signed app bundle and a fresh user account.
 
-Public release validation should use a Developer ID Application certificate and Apple notarization. Unsigned release archives can still be useful for testers, but they should be labeled as unsigned and may require manual Gatekeeper approval. CI release tests should avoid fixed timing assumptions for async service state transitions because hosted runners can be slower than local machines.
+Public release validation should use a Developer ID Application certificate and Apple notarization. Unsigned release archives can still be useful for testers, but they should be ad-hoc signed for bundle integrity, labeled as unsigned, and may require manual Gatekeeper approval. CI release tests should avoid fixed timing assumptions for async service state transitions because hosted runners can be slower than local machines.
 
 ## Feasibility Verdict
 

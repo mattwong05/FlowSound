@@ -35,4 +35,6 @@ if [[ -f "Assets/FlowSound.icns" ]]; then
     cp "Assets/FlowSound.icns" "$RESOURCES_DIR/FlowSound.icns"
 fi
 
+codesign --force --deep --sign - "$APP_DIR"
+
 echo "$APP_DIR"

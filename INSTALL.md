@@ -41,7 +41,13 @@ FlowSound does not record audio, save captured audio, upload data, or use analyt
 
 ## Unsigned Builds
 
-Unsigned builds are intended for developers and testers. They may show Gatekeeper warnings and may require manual approval in System Settings.
+Unsigned builds are intended for developers and testers. FlowSound ad-hoc signs local app bundles so the bundle is internally consistent, but unsigned release archives may still show Gatekeeper warnings and may require manual approval in System Settings.
+
+If macOS still blocks an unsigned tester build downloaded from GitHub, verify the checksum first, then remove the download quarantine attribute:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/FlowSound.app
+```
 
 Public releases should be signed with a Developer ID Application certificate and notarized by Apple. A local `Apple Development` certificate is not enough for a smooth public install experience.
 

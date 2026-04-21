@@ -14,6 +14,13 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.11.2] - 2026-04-21
+
+### Fixed
+
+- Fixed release archives containing an invalid app bundle signature by ad-hoc signing `FlowSound.app` after packaging.
+- Fixed generated GitHub Release notes keeping the literal `VERSION` placeholder.
+
 ## [0.11.1] - 2026-04-21
 
 ### Fixed

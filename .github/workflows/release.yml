@@ -64,6 +64,7 @@ jobs:
           path: |
             dist/FlowSound-*.zip
             dist/SHA256SUMS.txt
+            dist/RELEASE_NOTES.md
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -76,5 +77,5 @@ jobs:
           else
             gh release create "$TAG_NAME" dist/FlowSound-*.zip dist/SHA256SUMS.txt \
               --title "FlowSound ${TAG_NAME#v}" \
-              --notes-file docs/RELEASE_NOTES_TEMPLATE.md
+              --notes-file dist/RELEASE_NOTES.md
           fi
