@@ -18,23 +18,35 @@ import Testing
 
     service.enable()
     activityMonitor.emit(.active)
-    try await Task.sleep(for: .milliseconds(350))
-    #expect(service.state == .pausedByFlowSound)
+    try await waitForState(.pausedByFlowSound, in: service)
 
     activityMonitor.emit(.quiet)
-    try await Task.sleep(for: .milliseconds(120))
-    #expect(service.state == .restoring)
+    try await waitForState(.restoring, in: service)
 
     activityMonitor.emit(.active)
-    try await Task.sleep(for: .milliseconds(350))
-    #expect(service.state == .pausedByFlowSound)
+    try await waitForState(.pausedByFlowSound, in: service)
 
     activityMonitor.emit(.quiet)
-    try await Task.sleep(for: .milliseconds(700))
+    try await waitForState(.listening, in: service, timeout: .seconds(3))
 
     let finalVolume = try await musicController.currentVolume()
     #expect(finalVolume == 21)
     #expect(service.state == .listening)
+}
+
+@MainActor
+private func waitForState(
+    _ expectedState: DuckingState,
+    in service: FlowSoundService,
+    timeout: Duration = .seconds(2),
+    pollInterval: Duration = .milliseconds(25),
+    sourceLocation: SourceLocation = #_sourceLocation
+) async throws {
+    let deadline = ContinuousClock.now + timeout
+    while service.state != expectedState, ContinuousClock.now < deadline {
+        try await Task.sleep(for: pollInterval)
+    }
+    #expect(service.state == expectedState, sourceLocation: sourceLocation)
 }
 
 private actor RecordingMusicController: MusicController {

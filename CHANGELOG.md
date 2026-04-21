@@ -14,6 +14,12 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.11.1] - 2026-04-21
+
+### Fixed
+
+- Fixed the interrupted-restore service test using fixed sleeps that could fail on slower CI runners.
+
 ## [0.11.0] - 2026-04-21
 
 ### Added

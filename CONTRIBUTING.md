@@ -94,6 +94,7 @@ GitHub Actions can build release artifacts from tags. Configure these repository
 Before merging functional changes:
 
 - Run unit tests.
+- Prefer polling expected async service state in tests instead of relying on fixed sleeps.
 - For launch-at-login changes, test both paths: changing the checkbox should call the native registration path, while saving Preferences again without changing the checkbox should leave the login item untouched.
 - Run state machine tests.
 - Manually test Safari playback in all-apps monitoring mode.
