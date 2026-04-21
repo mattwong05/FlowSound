@@ -14,6 +14,14 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.12.2] - 2026-04-22
+
+### Changed
+
+- Redesigned the website hero to use a more visual before-and-after audio focus diagram.
+- Moved the Product Hunt badge out of the hero visualization and into the main call-to-action area.
+- Reduced the website header height and logo footprint.
+
 ## [0.12.1] - 2026-04-22
 
 ### Changed
