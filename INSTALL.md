@@ -9,7 +9,7 @@ FlowSound is a native macOS menu bar app for Apple Music and Spotify.
 - Permission to capture system audio activity.
 - Permission to control Music through Apple Events / Automation.
 
-FlowSound currently controls Apple Music and Spotify through local AppleScript. It does not control YouTube Music or other music apps.
+FlowSound currently controls Apple Music and Spotify through local AppleScript. Other music apps can be adapted if they expose reliable local playback and volume control.
 
 ## Recommended Install
 

@@ -44,6 +44,8 @@ FlowSound is open source and designed to be local-first:
 
 FlowSound detects whether other apps are producing audio, then controls Apple Music or Spotify locally through Apple Events. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md) for details.
 
+Apple Music and Spotify are the supported music apps in the current release. Additional music apps can be adapted if they expose reliable local playback and volume control.
+
 ## Current Implementation
 
 The current build is a native Swift menu bar app with:

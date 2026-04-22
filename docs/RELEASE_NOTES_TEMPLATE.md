@@ -43,6 +43,6 @@ See `INSTALL.md` for details.
 
 ## Known Limitations
 
-- FlowSound controls Apple Music and Spotify only.
+- FlowSound controls Apple Music and Spotify in the current release. Other music apps can be adapted if they expose reliable local playback and volume control.
 - Unsigned builds are ad-hoc signed for bundle integrity but may still require manual Gatekeeper approval.
 - Launch at Login should be validated with signed and installed builds.

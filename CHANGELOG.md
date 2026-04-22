@@ -14,6 +14,13 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.14.4] - 2026-04-22
+
+### Changed
+
+- Updated public documentation and website copy for the current support matrix: macOS 15+, Apple Music, Spotify, and English / Simplified Chinese.
+- Clarified that additional music apps can be adapted when they expose reliable local playback and volume control.
+
 ## [0.14.3] - 2026-04-22
 
 ### Fixed

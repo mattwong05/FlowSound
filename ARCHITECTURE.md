@@ -57,7 +57,7 @@ Responsibilities:
 
 ### MusicController
 
-Controls Apple Music or Spotify through a narrow automation adapter. The current implementation uses `osascript` to run short AppleScript commands.
+Controls Apple Music or Spotify through a narrow automation adapter. The current implementation uses `osascript` to run short AppleScript commands. Additional music apps should be added behind the same boundary when they expose reliable local playback and volume control.
 
 Responsibilities:
 
@@ -179,7 +179,7 @@ Responsibilities:
 
 ## Default Configuration
 
-- Music app: Apple Music.
+- Default selected music app: Apple Music.
 - Monitoring mode: all apps except the selected music app.
 - Excluded bundle identifiers: selected music app, FlowSound, and common macOS notification services.
 - Watched-app-only fallback whitelist: Safari and Telegram.
