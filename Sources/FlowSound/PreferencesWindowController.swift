@@ -4,16 +4,43 @@ import AppKit
 final class PreferencesWindowController {
     private enum Layout {
         static let width: CGFloat = 720
-        static let height: CGFloat = 640
+        static let defaultHeight: CGFloat = 640
+        static let minimumHeight: CGFloat = 420
+        static let verticalChrome: CGFloat = 148
+        static let maxVisibleContentHeight: CGFloat = 640
         static let contentWidth: CGFloat = 640
         static let labelWidth: CGFloat = 140
         static let fieldWidth: CGFloat = 86
+        static let tabWidth: CGFloat = 116
+    }
+
+    private enum PreferencesTab: Int, CaseIterable {
+        case general
+        case monitoring
+        case tools
+
+        var title: String {
+            switch self {
+            case .general:
+                FlowSoundStrings.text(.generalTab)
+            case .monitoring:
+                FlowSoundStrings.text(.monitoringTab)
+            case .tools:
+                FlowSoundStrings.text(.toolsTab)
+            }
+        }
     }
 
     private let settingsStore: FlowSoundSettingsStore
     private let diagnosticsWindowController = StartupWindowController()
     private var window: NSWindow?
     private var loadedLaunchAtLoginState: Bool?
+    private var selectedTab: PreferencesTab = .general
+    private let tabControl = NSSegmentedControl()
+    private let contentScrollView = NSScrollView()
+    private var contentHeightConstraint: NSLayoutConstraint?
+    private var currentContentView: NSView?
+    private var tabContentViews: [PreferencesTab: NSView] = [:]
 
     private let languagePopup = NSPopUpButton()
     private let musicPlayerPopup = NSPopUpButton()
@@ -43,75 +70,148 @@ final class PreferencesWindowController {
         }
 
         let rootView = NSView()
-        let tabView = NSTabView()
-        tabView.translatesAutoresizingMaskIntoConstraints = false
-        tabView.tabViewType = .topTabsBezelBorder
-        tabView.addTabViewItem(tab(title: FlowSoundStrings.text(.generalTab), view: scrollable(makeGeneralTab())))
-        tabView.addTabViewItem(tab(title: FlowSoundStrings.text(.monitoringTab), view: scrollable(makeMonitoringTab())))
-        tabView.addTabViewItem(tab(title: FlowSoundStrings.text(.toolsTab), view: scrollable(makeToolsTab())))
+        configureTabControl()
+        configureContentScrollView()
 
         let buttonRow = makeButtonRow()
+        tabControl.translatesAutoresizingMaskIntoConstraints = false
+        contentScrollView.translatesAutoresizingMaskIntoConstraints = false
         buttonRow.translatesAutoresizingMaskIntoConstraints = false
-        rootView.addSubview(tabView)
+        rootView.addSubview(tabControl)
+        rootView.addSubview(contentScrollView)
         rootView.addSubview(buttonRow)
 
         NSLayoutConstraint.activate([
-            tabView.topAnchor.constraint(equalTo: rootView.topAnchor, constant: 18),
-            tabView.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 20),
-            tabView.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -20),
-            buttonRow.topAnchor.constraint(equalTo: tabView.bottomAnchor, constant: 14),
+            tabControl.topAnchor.constraint(equalTo: rootView.topAnchor, constant: 18),
+            tabControl.centerXAnchor.constraint(equalTo: rootView.centerXAnchor),
+
+            contentScrollView.topAnchor.constraint(equalTo: tabControl.bottomAnchor, constant: 16),
+            contentScrollView.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 20),
+            contentScrollView.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -20),
+
+            buttonRow.topAnchor.constraint(equalTo: contentScrollView.bottomAnchor, constant: 14),
             buttonRow.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 20),
             buttonRow.trailingAnchor.constraint(lessThanOrEqualTo: rootView.trailingAnchor, constant: -20),
             buttonRow.bottomAnchor.constraint(equalTo: rootView.bottomAnchor, constant: -18)
         ])
 
         let preferencesWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: Layout.width, height: Layout.height),
+            contentRect: NSRect(x: 0, y: 0, width: Layout.width, height: Layout.defaultHeight),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
         preferencesWindow.title = FlowSoundStrings.text(.preferencesTitle)
         preferencesWindow.contentView = rootView
-        preferencesWindow.minSize = NSSize(width: Layout.width, height: 520)
+        preferencesWindow.minSize = NSSize(width: Layout.width, height: Layout.minimumHeight)
         preferencesWindow.center()
         preferencesWindow.isReleasedWhenClosed = false
         window = preferencesWindow
 
+        PreferencesTab.allCases.forEach { _ = contentView(for: $0) }
+        showSelectedTab(adjustWindow: false)
         populateFields()
         refreshRecentAudioSources()
+        adjustWindowHeightForSelectedTab()
         preferencesWindow.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    private func tab(title: String, view: NSView) -> NSTabViewItem {
-        let item = NSTabViewItem()
-        item.label = title
-        item.view = view
-        return item
+    private func configureTabControl() {
+        tabControl.segmentCount = PreferencesTab.allCases.count
+        tabControl.trackingMode = .selectOne
+        tabControl.target = self
+        tabControl.action = #selector(tabChanged)
+
+        for tab in PreferencesTab.allCases {
+            tabControl.setLabel(tab.title, forSegment: tab.rawValue)
+            tabControl.setWidth(Layout.tabWidth, forSegment: tab.rawValue)
+        }
+        tabControl.selectedSegment = selectedTab.rawValue
     }
 
-    private func scrollable(_ content: NSView) -> NSScrollView {
-        let scrollView = NSScrollView()
-        scrollView.hasVerticalScroller = true
-        scrollView.drawsBackground = false
-        scrollView.borderType = .noBorder
+    private func configureContentScrollView() {
+        contentScrollView.hasVerticalScroller = true
+        contentScrollView.drawsBackground = false
+        contentScrollView.borderType = .noBorder
+        contentHeightConstraint = contentScrollView.heightAnchor.constraint(equalToConstant: 1)
+        contentHeightConstraint?.isActive = true
+    }
 
+    @objc private func tabChanged() {
+        guard let tab = PreferencesTab(rawValue: tabControl.selectedSegment) else {
+            return
+        }
+        selectedTab = tab
+        showSelectedTab(adjustWindow: true)
+        refreshRecentAudioSources()
+    }
+
+    private func showSelectedTab(adjustWindow: Bool) {
+        let content = contentView(for: selectedTab)
+        currentContentView = content
+        contentScrollView.documentView = makeScrollableDocument(for: content)
+
+        if adjustWindow {
+            adjustWindowHeightForSelectedTab()
+        }
+    }
+
+    private func contentView(for tab: PreferencesTab) -> NSView {
+        if let view = tabContentViews[tab] {
+            return view
+        }
+
+        let view: NSView
+        switch tab {
+        case .general:
+            view = makeGeneralTab()
+        case .monitoring:
+            view = makeMonitoringTab()
+        case .tools:
+            view = makeToolsTab()
+        }
+        tabContentViews[tab] = view
+        return view
+    }
+
+    private func makeScrollableDocument(for content: NSView) -> NSView {
         let documentView = NSView()
         documentView.translatesAutoresizingMaskIntoConstraints = false
         content.translatesAutoresizingMaskIntoConstraints = false
         documentView.addSubview(content)
-        scrollView.documentView = documentView
 
         NSLayoutConstraint.activate([
-            content.topAnchor.constraint(equalTo: documentView.topAnchor, constant: 18),
-            content.leadingAnchor.constraint(equalTo: documentView.leadingAnchor, constant: 18),
-            content.trailingAnchor.constraint(equalTo: documentView.trailingAnchor, constant: -18),
-            content.bottomAnchor.constraint(equalTo: documentView.bottomAnchor, constant: -18),
-            content.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor, constant: -36)
+            content.topAnchor.constraint(equalTo: documentView.topAnchor, constant: 2),
+            content.leadingAnchor.constraint(equalTo: documentView.leadingAnchor),
+            content.trailingAnchor.constraint(equalTo: documentView.trailingAnchor),
+            content.bottomAnchor.constraint(equalTo: documentView.bottomAnchor, constant: -2),
+            content.widthAnchor.constraint(equalTo: contentScrollView.contentView.widthAnchor)
         ])
 
-        return scrollView
+        return documentView
+    }
+
+    private func adjustWindowHeightForSelectedTab() {
+        guard let window, let currentContentView else {
+            return
+        }
+
+        currentContentView.layoutSubtreeIfNeeded()
+        let fittingHeight = currentContentView.fittingSize.height + 8
+        let visibleContentHeight = min(Layout.maxVisibleContentHeight, max(260, fittingHeight))
+        contentHeightConstraint?.constant = visibleContentHeight
+
+        let targetContentHeight = Layout.verticalChrome + visibleContentHeight
+        let screenHeight = window.screen?.visibleFrame.height ?? NSScreen.main?.visibleFrame.height ?? targetContentHeight
+        let cappedContentHeight = min(targetContentHeight, screenHeight - 80)
+
+        var frame = window.frame
+        let newHeight = max(Layout.minimumHeight, cappedContentHeight)
+        let delta = newHeight - frame.height
+        frame.origin.y -= delta
+        frame.size.height = newHeight
+        window.setFrame(frame, display: true, animate: false)
     }
 
     private func makeGeneralTab() -> NSStackView {
@@ -296,13 +396,27 @@ final class PreferencesWindowController {
         recentSourcesStack.orientation = .vertical
         recentSourcesStack.alignment = .leading
         recentSourcesStack.spacing = 8
+        recentSourcesStack.translatesAutoresizingMaskIntoConstraints = false
+
+        let documentView = NSView()
+        documentView.translatesAutoresizingMaskIntoConstraints = false
+        documentView.addSubview(recentSourcesStack)
 
         let scrollView = NSScrollView()
         scrollView.borderType = .bezelBorder
         scrollView.hasVerticalScroller = true
-        scrollView.documentView = recentSourcesStack
+        scrollView.documentView = documentView
         scrollView.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
         scrollView.heightAnchor.constraint(equalToConstant: 250).isActive = true
+
+        NSLayoutConstraint.activate([
+            recentSourcesStack.topAnchor.constraint(equalTo: documentView.topAnchor, constant: 10),
+            recentSourcesStack.leadingAnchor.constraint(equalTo: documentView.leadingAnchor, constant: 10),
+            recentSourcesStack.trailingAnchor.constraint(equalTo: documentView.trailingAnchor, constant: -10),
+            recentSourcesStack.bottomAnchor.constraint(lessThanOrEqualTo: documentView.bottomAnchor, constant: -10),
+            recentSourcesStack.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor, constant: -20)
+        ])
+
         return scrollView
     }
 
@@ -413,6 +527,7 @@ final class PreferencesWindowController {
     private func rebuildWindow() {
         window?.close()
         window = nil
+        tabContentViews.removeAll()
         show()
     }
 
@@ -496,7 +611,8 @@ final class PreferencesWindowController {
         let row = NSStackView()
         row.orientation = .horizontal
         row.alignment = .centerY
-        row.spacing = 10
+        row.spacing = 12
+        row.edgeInsets = NSEdgeInsets(top: 6, left: 6, bottom: 6, right: 6)
 
         let iconView = NSImageView()
         iconView.image = appIcon(for: source)
@@ -510,21 +626,27 @@ final class PreferencesWindowController {
         textStack.spacing = 2
         let title = NSTextField(labelWithString: appName(for: source))
         title.font = .systemFont(ofSize: 12, weight: .medium)
+        title.lineBreakMode = .byTruncatingTail
         let detail = NSTextField(labelWithString: "\(source.bundleIdentifier)  pid=\(source.pid)")
         detail.textColor = .secondaryLabelColor
         detail.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
+        detail.lineBreakMode = .byTruncatingMiddle
+        detail.maximumNumberOfLines = 1
+        textStack.widthAnchor.constraint(equalToConstant: 390).isActive = true
         textStack.addArrangedSubview(title)
         textStack.addArrangedSubview(detail)
 
         let status = NSTextField(labelWithString: statusLabel(for: source.status))
         status.textColor = statusColor(for: source.status)
         status.alignment = .right
-        status.widthAnchor.constraint(equalToConstant: 140).isActive = true
+        status.font = .systemFont(ofSize: 12, weight: .medium)
+        status.lineBreakMode = .byTruncatingTail
+        status.widthAnchor.constraint(equalToConstant: 160).isActive = true
 
         row.addArrangedSubview(iconView)
         row.addArrangedSubview(textStack)
         row.addArrangedSubview(status)
-        row.widthAnchor.constraint(equalToConstant: Layout.contentWidth - 18).isActive = true
+        row.widthAnchor.constraint(equalToConstant: Layout.contentWidth - 28).isActive = true
         return row
     }
 

@@ -14,6 +14,14 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.14.1] - 2026-04-22
+
+### Fixed
+
+- Fixed Preferences tab spacing and removed the oversized empty top gap inside tab content.
+- Fixed Preferences window height so it adapts to the selected tab instead of using the tallest tab's height.
+- Fixed the recently detected audio sources list so app names, bundle identifiers, pids, and watched/excluded status are visible.
+
 ## [0.14.0] - 2026-04-22
 
 ### Added
