@@ -11,7 +11,7 @@ final class FlowSoundApp: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
 
         let settings = settingsStore.settings
-        let musicController = AppleScriptMusicController()
+        let musicController = AppleScriptMusicController(player: settings.controlledMusicPlayer)
         let activityMonitor = CoreAudioProcessTapMonitor()
         let flowSoundService = FlowSoundService(
             settings: settings,
@@ -27,7 +27,10 @@ final class FlowSoundApp: NSObject, NSApplicationDelegate {
         self.service = flowSoundService
         self.statusController = controller
         settingsStore.onSettingsChanged = { [weak flowSoundService, weak controller] settings in
-            flowSoundService?.updateSettings(settings)
+            flowSoundService?.updateSettings(
+                settings,
+                musicController: AppleScriptMusicController(player: settings.controlledMusicPlayer)
+            )
             controller?.applySettings(settings)
         }
         controller.install()

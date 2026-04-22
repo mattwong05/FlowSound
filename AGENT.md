@@ -53,8 +53,8 @@ Allowed commit types:
 - Keep known helper-process expansion explicit and documented.
 - Keep release packaging, signing, notarization, and checksum behavior documented.
 - Keep website deployment and multilingual landing page behavior documented.
-- Keep Apple Music automation isolated from product state.
+- Keep music app automation isolated from product state.
 - Treat permission failures as explicit states.
 - Avoid silent behavior changes.
 - Prefer unit-testable state machine logic.
-- Do not resume Apple Music unless FlowSound paused it.
+- Do not resume the selected music app unless FlowSound paused it.

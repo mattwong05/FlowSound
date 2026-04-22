@@ -10,14 +10,14 @@ final class StatusMenuController {
     private let aboutWindowController = AboutWindowController()
     private let diagnosticsWindowController = StartupWindowController()
     private lazy var preferencesWindowController = PreferencesWindowController(settingsStore: settingsStore)
-    private let statusMenuItem = NSMenuItem(title: "Status: Deactivated", action: nil, keyEquivalent: "")
-    private let toggleMenuItem = NSMenuItem(title: "Activate FlowSound", action: #selector(toggleEnabled), keyEquivalent: "")
-    private let simulateActiveItem = NSMenuItem(title: "Simulate Watched Audio", action: #selector(simulateActive), keyEquivalent: "")
-    private let simulateQuietItem = NSMenuItem(title: "Simulate Quiet", action: #selector(simulateQuiet), keyEquivalent: "")
-    private let preferencesMenuItem = NSMenuItem(title: "Preferences...", action: #selector(showPreferences), keyEquivalent: ",")
-    private let aboutMenuItem = NSMenuItem(title: "About FlowSound", action: #selector(showAbout), keyEquivalent: "")
-    private let showDiagnosticsMenuItem = NSMenuItem(title: "Show Diagnostics", action: #selector(showDiagnostics), keyEquivalent: "")
-    private let diagnosticsMenuItem = NSMenuItem(title: "Copy Diagnostics Path", action: #selector(copyDiagnosticsPath), keyEquivalent: "")
+    private let statusMenuItem = NSMenuItem(title: FlowSoundStrings.text(.status(FlowSoundStrings.text(.deactivated))), action: nil, keyEquivalent: "")
+    private let toggleMenuItem = NSMenuItem(title: FlowSoundStrings.text(.menuActivate), action: #selector(toggleEnabled), keyEquivalent: "")
+    private let simulateActiveItem = NSMenuItem(title: FlowSoundStrings.text(.menuSimulateActive), action: #selector(simulateActive), keyEquivalent: "")
+    private let simulateQuietItem = NSMenuItem(title: FlowSoundStrings.text(.menuSimulateQuiet), action: #selector(simulateQuiet), keyEquivalent: "")
+    private let preferencesMenuItem = NSMenuItem(title: FlowSoundStrings.text(.menuPreferences), action: #selector(showPreferences), keyEquivalent: ",")
+    private let aboutMenuItem = NSMenuItem(title: FlowSoundStrings.text(.menuAbout), action: #selector(showAbout), keyEquivalent: "")
+    private let showDiagnosticsMenuItem = NSMenuItem(title: FlowSoundStrings.text(.menuShowDiagnostics), action: #selector(showDiagnostics), keyEquivalent: "")
+    private let diagnosticsMenuItem = NSMenuItem(title: FlowSoundStrings.text(.menuCopyDiagnostics), action: #selector(copyDiagnosticsPath), keyEquivalent: "")
 
     init(
         service: FlowSoundService,
@@ -82,21 +82,22 @@ final class StatusMenuController {
         menu.addItem(aboutMenuItem)
         menu.addItem(showDiagnosticsMenuItem)
         menu.addItem(diagnosticsMenuItem)
-        menu.addItem(NSMenuItem(title: "Quit FlowSound", action: #selector(quit), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: FlowSoundStrings.text(.menuQuit), action: #selector(quit), keyEquivalent: "q"))
         menu.items.last?.target = self
         statusItem.menu = menu
         FlowSoundDiagnostics.log("status menu configured with \(menu.items.count) items")
     }
 
     private func render(_ state: DuckingState) {
-        FlowSoundDiagnostics.log("render state: \(state.label)")
-        statusMenuItem.title = "Status: \(state.label)"
-        toggleMenuItem.title = state == .disabled ? "Activate FlowSound" : "Deactivate FlowSound"
+        let label = state.label(playerName: settingsStore.settings.controlledMusicPlayer.displayName)
+        FlowSoundDiagnostics.log("render state: \(label)")
+        statusMenuItem.title = FlowSoundStrings.text(.status(label))
+        toggleMenuItem.title = state == .disabled ? FlowSoundStrings.text(.menuActivate) : FlowSoundStrings.text(.menuDeactivate)
         simulateActiveItem.isEnabled = state != .disabled
         simulateQuietItem.isEnabled = state != .disabled
 
         if let button = statusItem.button {
-            button.toolTip = "FlowSound: \(state.label)"
+            button.toolTip = "FlowSound: \(label)"
         }
         updateStatusIcon(for: state)
     }

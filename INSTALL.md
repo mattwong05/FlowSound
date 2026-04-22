@@ -1,15 +1,15 @@
 # Install FlowSound
 
-FlowSound is a native macOS menu bar app for Apple Music.
+FlowSound is a native macOS menu bar app for Apple Music and Spotify.
 
 ## Requirements
 
-- macOS 26 or newer.
-- Apple Music installed and available.
+- macOS 15 or newer.
+- Apple Music or Spotify installed and available.
 - Permission to capture system audio activity.
 - Permission to control Music through Apple Events / Automation.
 
-FlowSound currently controls Apple Music only. It does not control Spotify, YouTube Music, or other music apps.
+FlowSound currently controls Apple Music and Spotify through local AppleScript. It does not control YouTube Music or other music apps.
 
 ## Recommended Install
 
@@ -34,7 +34,7 @@ FlowSound lives in the menu bar. It does not appear in the Dock.
 macOS may ask for:
 
 - Audio capture permission, so FlowSound can detect whether other apps are producing audio.
-- Automation permission, so FlowSound can control Apple Music playback and volume.
+- Automation permission, so FlowSound can control Apple Music or Spotify playback and volume.
 - Login Item approval, only if you enable Launch at Login in Preferences.
 
 FlowSound does not record audio, save captured audio, upload data, or use analytics.

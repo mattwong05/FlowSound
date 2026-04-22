@@ -34,6 +34,34 @@ import Testing
     #expect(service.state == .listening)
 }
 
+@Test @MainActor func changingMusicPlayerClearsPendingRestoreState() async throws {
+    var settings = FlowSoundSettings.defaults
+    settings.quietDuration = 0.05
+    settings.fadeOutDuration = 0.1
+    settings.fadeInDuration = 0.1
+
+    let appleMusicController = RecordingMusicController(playerName: "Apple Music", initialVolume: 21)
+    let spotifyController = RecordingMusicController(playerName: "Spotify", initialVolume: 70)
+    let activityMonitor = TestAudioActivityMonitor()
+    let service = FlowSoundService(
+        settings: settings,
+        musicController: appleMusicController,
+        activityMonitor: activityMonitor
+    )
+
+    service.enable()
+    activityMonitor.emit(.active)
+    try await waitForState(.pausedByFlowSound, in: service)
+
+    settings.controlledMusicPlayer = .spotify
+    service.updateSettings(settings, musicController: spotifyController)
+    activityMonitor.emit(.quiet)
+    try await Task.sleep(for: .milliseconds(150))
+
+    #expect(service.state == .listening)
+    #expect(try await spotifyController.currentVolume() == 70)
+}
+
 @MainActor
 private func waitForState(
     _ expectedState: DuckingState,
@@ -50,10 +78,12 @@ private func waitForState(
 }
 
 private actor RecordingMusicController: MusicController {
+    nonisolated let playerName: String
     private var volume: Int
     private var state: MusicPlaybackState = .playing
 
-    init(initialVolume: Int) {
+    init(playerName: String = "Test Music", initialVolume: Int) {
+        self.playerName = playerName
         volume = initialVolume
     }
 

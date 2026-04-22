@@ -34,7 +34,7 @@ Responsibilities:
 
 - Create and destroy Core Audio process taps.
 - Recreate taps when the watched app whitelist changes.
-- Support all-apps monitoring by excluding Apple Music and FlowSound from an exclusive process tap.
+- Support all-apps monitoring by excluding the selected music app and FlowSound from an exclusive process tap.
 - Wrap the tap in a private aggregate device and start an IO proc.
 - Read captured audio buffers.
 - Compute RMS level from the captured PCM buffers.
@@ -57,14 +57,14 @@ Responsibilities:
 
 ### MusicController
 
-Controls Apple Music through a narrow automation adapter. The current implementation uses `osascript` to run short AppleScript commands.
+Controls Apple Music or Spotify through a narrow automation adapter. The current implementation uses `osascript` to run short AppleScript commands.
 
 Responsibilities:
 
-- Read and store Music volume before FlowSound changes it.
-- Read Music playback state before ducking.
+- Read and store the selected music app volume before FlowSound changes it.
+- Read the selected music app playback state before ducking.
 - Fade volume down and up.
-- Pause and play Music.
+- Pause and play the selected music app.
 - Report automation failures without hiding them.
 
 ### DuckingStateMachine
@@ -83,8 +83,8 @@ Initial states:
 
 Important rules:
 
-- Resume only when FlowSound paused Music.
-- Skip ducking when Music is paused or stopped before watched audio starts.
+- Resume only when FlowSound paused the selected music app.
+- Skip ducking when the selected music app is paused or stopped before watched audio starts.
 - Cancel restore if watched audio becomes active again.
 - Cancel fade-in or fade-out when service is disabled.
 - Never overwrite the user's captured restore volume during interrupted duck/restore cycles.
@@ -95,6 +95,7 @@ Persists local configuration.
 
 Initial settings:
 
+- Selected music app.
 - Enabled flag.
 - Audio monitoring mode.
 - Excluded bundle identifiers for all-apps monitoring mode.
@@ -108,7 +109,7 @@ Initial settings:
 
 Settings are stored in `UserDefaults` through `FlowSoundSettingsStore`. Updates are applied to the menu bar presentation immediately and forwarded to `FlowSoundService`.
 
-Audio monitoring mode is persisted in `UserDefaults`. The default mode monitors all app audio except Apple Music, FlowSound, and common macOS notification services. Watched-app-only mode uses the user-editable bundle identifier list.
+Audio monitoring mode is persisted in `UserDefaults`. The default mode monitors all app audio except the selected music app, FlowSound, and common macOS notification services. Watched-app-only mode uses the user-editable bundle identifier list.
 
 Watched bundle identifiers are parsed from Preferences, validated, deduplicated, and persisted. If the saved whitelist is empty or invalid, FlowSound falls back to the default Safari and Telegram identifiers.
 
@@ -158,7 +159,7 @@ Release packaging responsibilities:
 - Keep unsigned development archives possible for testers.
 - Use Developer ID signing and notarization when release credentials are available.
 - Publish `FlowSound-<version>.zip` and `SHA256SUMS.txt`.
-- Keep release notes explicit about macOS 26+, Apple Music-only behavior, and required permissions.
+- Keep release notes explicit about macOS 15+, supported music apps, and required permissions.
 
 ### Website
 
@@ -175,8 +176,9 @@ Responsibilities:
 
 ## Default Configuration
 
-- Monitoring mode: all apps except Apple Music.
-- Excluded bundle identifiers: Apple Music, FlowSound, and common macOS notification services.
+- Music app: Apple Music.
+- Monitoring mode: all apps except the selected music app.
+- Excluded bundle identifiers: selected music app, FlowSound, and common macOS notification services.
 - Watched-app-only fallback whitelist: Safari and Telegram.
 - Active duration: 1 second.
 - Quiet duration: 3 seconds.
@@ -201,9 +203,10 @@ flowchart LR
 ## Design Decisions
 
 - Use Core Audio process taps instead of microphone input so FlowSound detects app output, not room sound. The codebase currently keeps this behind `AudioActivityMonitor`.
-- Use all-apps-except-Music monitoring by default to avoid per-app bundle identifier friction.
-- Use an excluded bundle identifier list to filter Apple Music, FlowSound, and common notification services from all-apps monitoring.
+- Use all-apps-except-selected-music-app monitoring by default to avoid per-app bundle identifier friction.
+- Use an excluded bundle identifier list to filter the selected music app, FlowSound, and common notification services from all-apps monitoring.
 - Use Core Audio process-output polling as a fallback activity source when a matching process is actively outputting audio.
 - Use AppleScript as a small adapter instead of ScriptingBridge-heavy integration.
+- Use Core Audio bundle-ID tap configuration on macOS 26 and newer. On macOS 15-25, use current Core Audio process object IDs because `CATapDescription.bundleIDs` and process restoration are macOS 26+ API.
 - Keep the first version local-only with no network service.
 - Treat permission failures as first-class app states.

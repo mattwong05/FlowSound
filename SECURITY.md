@@ -9,7 +9,7 @@ Official releases should include:
 - A GitHub Release tied to a version tag.
 - `FlowSound-<version>.zip`.
 - `SHA256SUMS.txt`.
-- Release notes that list supported macOS versions, Apple Music-only scope, and required permissions.
+- Release notes that list supported macOS versions, supported music apps, and required permissions.
 - A linked GitHub Actions run for the release build.
 
 Unsigned tester builds should still be ad-hoc signed after the `.app` bundle is assembled so macOS can verify bundle integrity. Ad-hoc signing does not replace Developer ID signing or notarization.
@@ -54,7 +54,7 @@ Include:
 FlowSound should keep these boundaries explicit:
 
 - Core Audio process tap logic stays isolated from UI code.
-- Apple Music automation stays behind `MusicController`.
+- Music app automation stays behind `MusicController`.
 - Permission failures should be visible to the user.
-- FlowSound should not resume Apple Music unless FlowSound paused it.
+- FlowSound should not resume the selected music app unless FlowSound paused it.
 - FlowSound should not add network behavior without documentation and review.

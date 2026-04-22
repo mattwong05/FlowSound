@@ -14,6 +14,20 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.13.0] - 2026-04-22
+
+### Added
+
+- Added Spotify as a selectable music app controlled through local AppleScript.
+- Added English and Simplified Chinese app UI selected from the system language, defaulting to English.
+- Added a clearer Preferences layout with music app selection and advanced bundle identifier filters collapsed by default.
+
+### Changed
+
+- Lowered the supported runtime target from macOS 26+ to macOS 15+.
+- Changed Core Audio tap setup to use bundle identifiers on macOS 26+ and process object IDs on macOS 15-25.
+- Updated the website, install notes, privacy notes, security notes, architecture, and roadmap for macOS 15+ and Apple Music / Spotify support.
+
 ## [0.12.2] - 2026-04-22
 
 ### Changed

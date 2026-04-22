@@ -22,6 +22,7 @@ import Testing
 }
 
 @Test func defaultsUseAllNonMusicModeAndCurrentTiming() {
+    #expect(FlowSoundSettings.defaults.controlledMusicPlayer == .appleMusic)
     #expect(FlowSoundSettings.defaults.monitoringMode == .allNonMusic)
     #expect(FlowSoundSettings.defaults.activeDuration == 1.0)
     #expect(FlowSoundSettings.defaults.quietDuration == 3.0)
@@ -55,6 +56,16 @@ import Testing
     #expect(identifiers.contains("com.apple.WebKit.Networking"))
 }
 
+@Test func spotifyControlledPlayerAddsSpotifyToEffectiveExclusions() {
+    var settings = FlowSoundSettings.defaults
+    settings.controlledMusicPlayer = .spotify
+
+    let identifiers = FlowSoundSettings.effectiveExcludedBundleIdentifiers(for: settings, appBundleIdentifier: "com.flowsound.FlowSound")
+
+    #expect(identifiers.contains("com.spotify.client"))
+    #expect(identifiers.contains("com.flowsound.FlowSound"))
+}
+
 @MainActor
 @Test func settingsStorePersistsWatchedBundleIdentifiers() {
     let suiteName = "FlowSoundSettingsTests.\(UUID().uuidString)"
@@ -69,6 +80,20 @@ import Testing
 
     #expect(store.settings.watchedBundleIdentifiers == ["com.example.VideoApp"])
     #expect(store.settings.excludedBundleIdentifiers == ["com.apple.Music"])
+}
+
+@MainActor
+@Test func settingsStorePersistsControlledMusicPlayer() {
+    let suiteName = "FlowSoundSettingsTests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+
+    let store = FlowSoundSettingsStore(defaults: defaults)
+    var settings = store.settings
+    settings.controlledMusicPlayer = .spotify
+    store.settings = settings
+
+    #expect(store.settings.controlledMusicPlayer == .spotify)
 }
 
 @MainActor

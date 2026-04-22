@@ -7,14 +7,47 @@ enum AudioMonitoringMode: String, Sendable, Equatable, CaseIterable {
     var label: String {
         switch self {
         case .allNonMusic:
-            "All apps except Apple Music"
+            FlowSoundStrings.text(.allNonMusic)
         case .watchedApps:
-            "Only watched apps"
+            FlowSoundStrings.text(.watchedApps)
+        }
+    }
+}
+
+enum ControlledMusicPlayer: String, Sendable, Equatable, CaseIterable {
+    case appleMusic
+    case spotify
+
+    var displayName: String {
+        switch self {
+        case .appleMusic:
+            "Apple Music"
+        case .spotify:
+            "Spotify"
+        }
+    }
+
+    var appleScriptApplicationName: String {
+        switch self {
+        case .appleMusic:
+            "Music"
+        case .spotify:
+            "Spotify"
+        }
+    }
+
+    var bundleIdentifiers: [String] {
+        switch self {
+        case .appleMusic:
+            ["com.apple.Music", "com.apple.iTunes"]
+        case .spotify:
+            ["com.spotify.client"]
         }
     }
 }
 
 struct FlowSoundSettings: Sendable, Equatable {
+    var controlledMusicPlayer: ControlledMusicPlayer
     var monitoringMode: AudioMonitoringMode
     var watchedBundleIdentifiers: [String]
     var excludedBundleIdentifiers: [String]
@@ -26,6 +59,7 @@ struct FlowSoundSettings: Sendable, Equatable {
     var showsMenuBarText: Bool
 
     static let defaults = FlowSoundSettings(
+        controlledMusicPlayer: .appleMusic,
         monitoringMode: .allNonMusic,
         watchedBundleIdentifiers: [
             "com.apple.Safari",
@@ -91,6 +125,15 @@ struct FlowSoundSettings: Sendable, Equatable {
         return normalized.isEmpty ? defaults.excludedBundleIdentifiers : normalized
     }
 
+    static func effectiveExcludedBundleIdentifiers(for settings: FlowSoundSettings, appBundleIdentifier: String? = Bundle.main.bundleIdentifier) -> [String] {
+        var identifiers = validExcludedBundleIdentifiers(settings.excludedBundleIdentifiers)
+        identifiers.append(contentsOf: settings.controlledMusicPlayer.bundleIdentifiers)
+        if let appBundleIdentifier {
+            identifiers.append(appBundleIdentifier)
+        }
+        return normalizedBundleIdentifiers(identifiers)
+    }
+
     static func expandedWatchedBundleIdentifiers(_ identifiers: [String]) -> [String] {
         let validIdentifiers = validWatchedBundleIdentifiers(identifiers)
         var expanded: [String] = []
@@ -134,6 +177,7 @@ final class FlowSoundSettingsStore {
 
     private enum Key {
         static let settingsSchemaVersion = "settingsSchemaVersion"
+        static let controlledMusicPlayer = "controlledMusicPlayer"
         static let monitoringMode = "monitoringMode"
         static let watchedBundleIdentifiers = "watchedBundleIdentifiers"
         static let excludedBundleIdentifiers = "excludedBundleIdentifiers"
@@ -162,6 +206,7 @@ final class FlowSoundSettingsStore {
     var settings: FlowSoundSettings {
         get {
             FlowSoundSettings(
+                controlledMusicPlayer: ControlledMusicPlayer(rawValue: defaults.string(forKey: Key.controlledMusicPlayer) ?? "") ?? FlowSoundSettings.defaults.controlledMusicPlayer,
                 monitoringMode: AudioMonitoringMode(rawValue: defaults.string(forKey: Key.monitoringMode) ?? "") ?? FlowSoundSettings.defaults.monitoringMode,
                 watchedBundleIdentifiers: FlowSoundSettings.validWatchedBundleIdentifiers(
                     defaults.stringArray(forKey: Key.watchedBundleIdentifiers) ?? FlowSoundSettings.defaults.watchedBundleIdentifiers
@@ -181,6 +226,7 @@ final class FlowSoundSettingsStore {
             var savedSettings = newValue
             savedSettings.watchedBundleIdentifiers = FlowSoundSettings.validWatchedBundleIdentifiers(newValue.watchedBundleIdentifiers)
             savedSettings.excludedBundleIdentifiers = FlowSoundSettings.validExcludedBundleIdentifiers(newValue.excludedBundleIdentifiers)
+            defaults.set(savedSettings.controlledMusicPlayer.rawValue, forKey: Key.controlledMusicPlayer)
             defaults.set(savedSettings.monitoringMode.rawValue, forKey: Key.monitoringMode)
             defaults.set(
                 savedSettings.watchedBundleIdentifiers,
@@ -206,6 +252,7 @@ final class FlowSoundSettingsStore {
 
     private func registerDefaults() {
         defaults.register(defaults: [
+            Key.controlledMusicPlayer: FlowSoundSettings.defaults.controlledMusicPlayer.rawValue,
             Key.monitoringMode: FlowSoundSettings.defaults.monitoringMode.rawValue,
             Key.watchedBundleIdentifiers: FlowSoundSettings.defaults.watchedBundleIdentifiers,
             Key.excludedBundleIdentifiers: FlowSoundSettings.defaults.excludedBundleIdentifiers,

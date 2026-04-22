@@ -1,11 +1,11 @@
 # FlowSound VERSION
 
-FlowSound is a native macOS menu bar app that fades and pauses Apple Music when other apps start playing audio, then restores Apple Music after things become quiet again.
+FlowSound is a native macOS menu bar app that fades and pauses Apple Music or Spotify when other apps start playing audio, then restores the selected music app after things become quiet again.
 
 ## Compatibility
 
-- macOS 26 or newer.
-- Apple Music only.
+- macOS 15 or newer.
+- Apple Music or Spotify.
 
 ## Download
 
@@ -23,7 +23,7 @@ shasum -a 256 -c SHA256SUMS.txt
 FlowSound may ask macOS for:
 
 - System audio capture permission to detect app audio activity.
-- Automation permission to control Apple Music playback and volume.
+- Automation permission to control Apple Music or Spotify playback and volume.
 - Login Item approval if Launch at Login is enabled.
 
 FlowSound does not record audio, upload data, use analytics, or contact a server.
@@ -43,6 +43,6 @@ See `INSTALL.md` for details.
 
 ## Known Limitations
 
-- FlowSound controls Apple Music only.
+- FlowSound controls Apple Music and Spotify only.
 - Unsigned builds are ad-hoc signed for bundle integrity but may still require manual Gatekeeper approval.
 - Launch at Login should be validated with signed and installed builds.

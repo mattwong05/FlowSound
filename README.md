@@ -1,8 +1,8 @@
 # FlowSound
 
-FlowSound is a macOS menu bar app that keeps Apple Music playing as background music, then automatically fades and pauses it when other apps start playing audio. When those apps become quiet again, FlowSound resumes Apple Music and fades it back to the previous volume.
+FlowSound is a macOS menu bar app that keeps Apple Music or Spotify playing as background music, then automatically fades and pauses it when other apps start playing audio. When those apps become quiet again, FlowSound resumes the selected music app and fades it back to the previous volume.
 
-The target platform is macOS 26+. The core APIs needed for the MVP are already available on modern macOS, including Core Audio process taps for outgoing process audio detection.
+The target platform is macOS 15+. FlowSound uses Core Audio process taps for outgoing process audio detection. On macOS 26 and newer it can configure taps by bundle identifier; on macOS 15-25 it falls back to process object IDs available when the tap starts.
 
 ## Website
 
@@ -38,7 +38,7 @@ FlowSound is open source and designed to be local-first:
 - No audio uploads.
 - No saved captured audio.
 
-FlowSound detects whether other apps are producing audio, then controls Apple Music locally through Apple Events. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md) for details.
+FlowSound detects whether other apps are producing audio, then controls Apple Music or Spotify locally through Apple Events. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md) for details.
 
 ## Current Implementation
 
@@ -46,34 +46,35 @@ The current build is a native Swift menu bar app with:
 
 - One-click enable and disable from the menu bar.
 - A tested ducking state machine.
-- Apple Music control through AppleScript and `osascript`.
+- Apple Music and Spotify control through AppleScript and `osascript`.
 - Fade-out, pause, play, and fade-in behavior.
-- Apple Music playback-state check so FlowSound only restores music that it paused itself.
-- Core Audio process tap monitoring for all non-Apple Music app audio by default.
+- Playback-state check so FlowSound only restores music that it paused itself.
+- Core Audio process tap monitoring for all non-selected-music-app audio by default.
 - Optional watched-app-only monitoring through bundle ID-based taps.
 - Automatic Safari expansion to include WebKit audio helper processes used by sites such as YouTube.
 - Process-output polling fallback for watched apps when the tap has not produced an RMS activity signal yet.
 - Manual menu items to simulate watched audio and quiet periods for debugging.
 - Split logo assets generated from `FlowSound-iCon.png`, including dark-background, light-background, and menu bar template variants.
 - An About window that chooses the light or dark FlowSound logo artwork based on appearance.
-- A Preferences window for audio monitoring mode, excluded app bundle identifiers, watched app bundle identifiers, active threshold, active duration, quiet duration, fade-out duration, fade-in duration, menu bar text visibility, and launch-at-login.
+- A localized English and Simplified Chinese interface selected from system language, defaulting to English.
+- A Preferences window for music app selection, audio monitoring mode, timing, menu bar text visibility, launch-at-login, and advanced bundle identifier filters.
 - A generated `.icns` app icon bundled into `FlowSound.app`.
 - Default activation on launch, with manual Activate / Deactivate control from the menu bar.
 - Active and deactivated menu bar icons generated from the supplied icon artwork.
 - App bundle packaging with Apple Events and system audio capture usage descriptions.
 
-The default monitoring mode listens to all app audio except Apple Music, FlowSound, and common macOS notification services. You can edit exclusions or switch to watched-app-only mode in Preferences.
+The default monitoring mode listens to all app audio except the selected music app, FlowSound, and common macOS notification services. You can edit exclusions or switch to watched-app-only mode in Preferences.
 
 ## MVP Behavior
 
-- Watch all non-Apple Music apps by default, or a configurable whitelist in watched-app-only mode.
+- Watch all apps except the selected music app by default, or a configurable whitelist in watched-app-only mode.
 - Treat app audio as active only after it produces audio above a threshold for 1 second.
-- Fade Apple Music volume down over 2 seconds.
-- Pause Apple Music after the fade-out completes.
-- Resume Apple Music after 3 seconds of quiet.
-- Fade Apple Music volume back to the volume captured before ducking.
+- Fade the selected music app volume down over 2 seconds.
+- Pause the selected music app after the fade-out completes.
+- Resume the selected music app after 3 seconds of quiet.
+- Fade the selected music app volume back to the volume captured before ducking.
 - Preserve the captured restore volume if restoring is interrupted by new app audio.
-- Skip ducking and restoring when Apple Music is not already playing.
+- Skip ducking and restoring when the selected music app is not already playing.
 - Provide a one-click menu bar toggle to enable or disable the service.
 - Start activated when the app launches.
 
@@ -84,9 +85,9 @@ FlowSound is implemented as a native Swift app:
 - App shell: AppKit menu bar integration.
 - Audio detection: Core Audio process taps through the `AudioActivityMonitor` boundary.
 - Signal analysis: short-window RMS or peak detection.
-- Apple Music control: AppleScript executed through a narrow Swift wrapper.
+- Music app control: AppleScript executed through a narrow Swift wrapper for Apple Music or Spotify.
 - Coordination: explicit state machine to avoid repeated pause/resume loops.
-- Configuration: local settings for monitoring mode, whitelist, thresholds, fade durations, and enablement.
+- Configuration: local settings for selected music app, monitoring mode, whitelist, exclusions, thresholds, fade durations, language-aware UI, and enablement.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/TECHNICAL_FEASIBILITY.md](docs/TECHNICAL_FEASIBILITY.md) for details.
 
@@ -94,8 +95,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/TECHNICAL_FEASIBILITY.md](docs/
 
 For development:
 
-- macOS 26 or newer for the product target.
-- Xcode with the macOS 26 SDK.
+- macOS 15 or newer for the product target.
+- Xcode with a recent macOS SDK. Current release builds are produced with Xcode 26.
 - Xcode Command Line Tools.
 - Swift and Swift Package Manager as provided by Xcode.
 - Git, recommended before implementation starts.
@@ -115,10 +116,10 @@ FlowSound will need:
 
 - System audio capture permission for Core Audio taps.
 - `NSAudioCaptureUsageDescription` in the app Info.plist.
-- Apple Events / Automation permission to control Music.
+- Apple Events / Automation permission to control Music or Spotify.
 - Hardened runtime and signing configuration before distributing outside local development.
 
-If App Sandbox is enabled, Apple Events control of Music must be tested carefully because sandboxing changes automation requirements.
+If App Sandbox is enabled, Apple Events control of Music and Spotify must be tested carefully because sandboxing changes automation requirements.
 
 Launch at login uses `SMAppService.mainApp`. Preferences only updates the login item when the checkbox value changes. Local `.build/FlowSound.app` builds can report `notFound` before registration or `requiresApproval` after registration; FlowSound treats `notFound` as a state where registration can still be attempted. Release validation should still use a signed and installed app bundle.
 
@@ -166,9 +167,8 @@ The app icon is generated as `Assets/FlowSound.icns` during packaging and copied
 
 Open `Preferences...` from the menu bar menu to configure:
 
-- Audio monitoring mode: all apps except Apple Music, or only watched apps.
-- Excluded app bundle identifiers, one per line, used in all-apps mode.
-- Watched app bundle identifiers, one per line.
+- Music app: Apple Music or Spotify.
+- Audio monitoring mode: all apps except the selected music app, or only watched apps.
 - Active threshold.
 - Active duration.
 - Quiet duration.
@@ -176,8 +176,10 @@ Open `Preferences...` from the menu bar menu to configure:
 - Fade-in duration.
 - Whether the menu bar shows the `FlowSound` text label or only the icon.
 - Whether FlowSound launches at login.
+- Advanced: excluded app bundle identifiers, one per line, used in all-apps mode.
+- Advanced: watched app bundle identifiers, one per line.
 
-FlowSound validates bundle identifiers before saving. Invalid values are ignored and duplicates are removed. An empty watched list falls back to Safari and Telegram; an empty excluded list falls back to Apple Music, FlowSound, and common macOS notification services. Saving Preferences restarts the Core Audio process tap when FlowSound is active.
+FlowSound validates bundle identifiers before saving. Invalid values are ignored and duplicates are removed. An empty watched list falls back to Safari and Telegram; an empty excluded list falls back to Apple Music, FlowSound, and common macOS notification services. The selected music app is always excluded from all-apps monitoring. Saving Preferences restarts the Core Audio process tap when FlowSound is active.
 
 Notifications are mixed on macOS. Some alert sounds come from system notification services such as `com.apple.usernoted`; some apps play their own sounds from their own process. The excluded list can suppress system notification services by default, and you can add a noisy app bundle identifier manually if you prefer to ignore that app entirely.
 
@@ -187,11 +189,13 @@ Safari is special-cased in watched-app-only mode because website audio is common
 
 FlowSound does not poll audio volume every 0.1 seconds. Core Audio pushes captured audio buffers into FlowSound through the process tap IO callback. FlowSound computes RMS for those buffers and records the latest audible time.
 
-A 0.1 second timer checks whether the current active signal has gone quiet. Brief low-RMS buffers do not reset the active candidate immediately; FlowSound allows a 0.75 second gap so normal video/music dynamics can still satisfy the 1 second active duration. A separate 0.5 second process-output poll is used for diagnostics, and as a fallback signal only in `Only watched apps` mode. In `All apps except Apple Music` mode, active and quiet decisions use the RMS tap so stale WebKit process-output state does not stretch the quiet duration.
+A 0.1 second timer checks whether the current active signal has gone quiet. Brief low-RMS buffers do not reset the active candidate immediately; FlowSound allows a 0.75 second gap so normal video/music dynamics can still satisfy the 1 second active duration. A separate 0.5 second process-output poll is used for diagnostics, and as a fallback signal only in `Only watched apps` mode. In `All apps except music` mode, active and quiet decisions use the RMS tap so stale WebKit process-output state does not stretch the quiet duration.
+
+On macOS 26 and newer, FlowSound configures Core Audio taps by bundle identifier and enables process restoration for apps that restart. On macOS 15-25, FlowSound configures taps with currently available Core Audio process object IDs because bundle-ID tap configuration is not available there. This supports macOS 15+, but if a watched or excluded app starts after the tap is created, toggling FlowSound off and on or saving Preferences recreates the tap with the current process list.
 
 Launch-at-login registration is only attempted when macOS reports FlowSound as not registered. If System Settings already shows a pending approval state, saving Preferences again will not register another login item.
 
-When new app audio interrupts a restore, FlowSound preserves the original restore volume and fades down from Apple Music's current in-progress volume. This prevents a partial fade, including a temporary volume of `0`, from becoming the next restore target.
+When new app audio interrupts a restore, FlowSound preserves the original restore volume and fades down from the selected music app's current in-progress volume. This prevents a partial fade, including a temporary volume of `0`, from becoming the next restore target.
 
 Useful commands for finding bundle identifiers:
 
@@ -204,7 +208,7 @@ Recommended tests for the first implementation:
 
 - Unit tests for the state machine.
 - Unit tests for threshold timing and quiet-window timing.
-- Unit tests for Apple Music command generation.
+- Unit tests for music app command generation.
 - Manual integration tests with Safari media playback in all-apps and watched-app-only modes.
 - Manual integration tests with Telegram notification sounds and media playback in all-apps mode.
 - Manual permission tests on a fresh macOS user account.

@@ -6,15 +6,18 @@ final class PreferencesWindowController {
     private var window: NSWindow?
     private var loadedLaunchAtLoginState: Bool?
 
+    private let musicPlayerPopup = NSPopUpButton()
+    private let monitoringModePopup = NSPopUpButton()
     private let activeThresholdField = NSTextField()
     private let activeDurationField = NSTextField()
     private let quietDurationField = NSTextField()
     private let fadeOutDurationField = NSTextField()
     private let fadeInDurationField = NSTextField()
-    private let monitoringModePopup = NSPopUpButton()
-    private let showsMenuBarTextCheckbox = NSButton(checkboxWithTitle: "Show FlowSound text in the menu bar", target: nil, action: nil)
-    private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Launch FlowSound at login", target: nil, action: nil)
+    private let showsMenuBarTextCheckbox = NSButton(checkboxWithTitle: FlowSoundStrings.text(.showMenuBarText), target: nil, action: nil)
+    private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: FlowSoundStrings.text(.launchAtLogin), target: nil, action: nil)
     private let loginItemStatusLabel = NSTextField(labelWithString: "")
+    private let advancedDisclosure = NSButton(title: FlowSoundStrings.text(.advanced), target: nil, action: nil)
+    private let advancedContainer = NSStackView()
     private let watchedBundleIdentifiersTextView = NSTextView()
     private let excludedBundleIdentifiersTextView = NSTextView()
 
@@ -33,46 +36,51 @@ final class PreferencesWindowController {
         let contentView = NSStackView()
         contentView.orientation = .vertical
         contentView.alignment = .leading
-        contentView.spacing = 12
-        contentView.edgeInsets = NSEdgeInsets(top: 22, left: 22, bottom: 22, right: 22)
+        contentView.spacing = 14
+        contentView.edgeInsets = NSEdgeInsets(top: 22, left: 24, bottom: 22, right: 24)
 
-        let title = NSTextField(labelWithString: "FlowSound Preferences")
+        let title = NSTextField(labelWithString: FlowSoundStrings.text(.preferencesTitle))
         title.font = .systemFont(ofSize: 22, weight: .semibold)
         contentView.addArrangedSubview(title)
 
-        contentView.addArrangedSubview(makeMonitoringModeRow())
-        contentView.addArrangedSubview(makeForm())
-        contentView.addArrangedSubview(makeWatchedAppsEditor())
-        contentView.addArrangedSubview(makeExcludedAppsEditor())
-
-        showsMenuBarTextCheckbox.target = self
-        contentView.addArrangedSubview(showsMenuBarTextCheckbox)
-
-        launchAtLoginCheckbox.target = self
-        contentView.addArrangedSubview(launchAtLoginCheckbox)
-
-        loginItemStatusLabel.textColor = .secondaryLabelColor
-        contentView.addArrangedSubview(loginItemStatusLabel)
-
-        let buttonRow = NSStackView()
-        buttonRow.orientation = .horizontal
-        buttonRow.spacing = 10
-        let resetButton = NSButton(title: "Reset Defaults", target: self, action: #selector(resetDefaults))
-        let loginItemsButton = NSButton(title: "Open Login Items", target: self, action: #selector(openLoginItems))
-        let saveButton = NSButton(title: "Save", target: self, action: #selector(save))
-        saveButton.keyEquivalent = "\r"
-        buttonRow.addArrangedSubview(resetButton)
-        buttonRow.addArrangedSubview(loginItemsButton)
-        buttonRow.addArrangedSubview(saveButton)
-        contentView.addArrangedSubview(buttonRow)
+        contentView.addArrangedSubview(
+            makeSection(
+                title: FlowSoundStrings.text(.musicPlayer),
+                help: FlowSoundStrings.text(.musicPlayerHelp),
+                rows: [makeMusicPlayerRow()]
+            )
+        )
+        contentView.addArrangedSubview(
+            makeSection(
+                title: FlowSoundStrings.text(.audioMonitoring),
+                help: FlowSoundStrings.text(.audioMonitoringHelp),
+                rows: [makeMonitoringModeRow()]
+            )
+        )
+        contentView.addArrangedSubview(
+            makeSection(
+                title: FlowSoundStrings.text(.timing),
+                help: FlowSoundStrings.text(.timingHelp),
+                rows: [
+                    formRow(FlowSoundStrings.text(.activeThreshold), activeThresholdField, FlowSoundStrings.text(.activeThresholdHelp)),
+                    formRow(FlowSoundStrings.text(.activeDuration), activeDurationField, FlowSoundStrings.text(.activeDurationHelp)),
+                    formRow(FlowSoundStrings.text(.quietDuration), quietDurationField, FlowSoundStrings.text(.quietDurationHelp)),
+                    formRow(FlowSoundStrings.text(.fadeOut), fadeOutDurationField, FlowSoundStrings.text(.fadeOutHelp)),
+                    formRow(FlowSoundStrings.text(.fadeIn), fadeInDurationField, FlowSoundStrings.text(.fadeInHelp))
+                ]
+            )
+        )
+        contentView.addArrangedSubview(makeOptionsSection())
+        contentView.addArrangedSubview(makeAdvancedSection())
+        contentView.addArrangedSubview(makeButtonRow())
 
         let preferencesWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 660, height: 680),
+            contentRect: NSRect(x: 0, y: 0, width: 680, height: 620),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
-        preferencesWindow.title = "FlowSound Preferences"
+        preferencesWindow.title = FlowSoundStrings.text(.preferencesTitle)
         preferencesWindow.contentView = contentView
         preferencesWindow.center()
         preferencesWindow.isReleasedWhenClosed = false
@@ -83,29 +91,39 @@ final class PreferencesWindowController {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    private func makeForm() -> NSStackView {
-        let form = NSStackView()
-        form.orientation = .vertical
-        form.alignment = .leading
-        form.spacing = 8
-        form.addArrangedSubview(formRow("Active threshold", activeThresholdField, "RMS threshold. Default: 0.02"))
-        form.addArrangedSubview(formRow("Active duration", activeDurationField, "Seconds before ducking. Default: 1.0"))
-        form.addArrangedSubview(formRow("Quiet duration", quietDurationField, "Seconds before restoring. Default: 3.0"))
-        form.addArrangedSubview(formRow("Fade out", fadeOutDurationField, "Seconds to fade before pause. Default: 2.0"))
-        form.addArrangedSubview(formRow("Fade in", fadeInDurationField, "Seconds to restore volume. Default: 2.0"))
-        return form
+    private func makeSection(title: String, help: String, rows: [NSView]) -> NSStackView {
+        let section = NSStackView()
+        section.orientation = .vertical
+        section.alignment = .leading
+        section.spacing = 8
+
+        let titleView = NSTextField(labelWithString: title)
+        titleView.font = .systemFont(ofSize: 13, weight: .semibold)
+        section.addArrangedSubview(titleView)
+
+        let helpView = NSTextField(wrappingLabelWithString: help)
+        helpView.textColor = .secondaryLabelColor
+        helpView.widthAnchor.constraint(equalToConstant: 620).isActive = true
+        section.addArrangedSubview(helpView)
+
+        for row in rows {
+            section.addArrangedSubview(row)
+        }
+
+        return section
+    }
+
+    private func makeMusicPlayerRow() -> NSStackView {
+        musicPlayerPopup.removeAllItems()
+        for player in ControlledMusicPlayer.allCases {
+            musicPlayerPopup.addItem(withTitle: player.displayName)
+            musicPlayerPopup.lastItem?.representedObject = player.rawValue
+        }
+        musicPlayerPopup.widthAnchor.constraint(equalToConstant: 220).isActive = true
+        return controlRow(FlowSoundStrings.text(.musicPlayer), musicPlayerPopup)
     }
 
     private func makeMonitoringModeRow() -> NSStackView {
-        let row = NSStackView()
-        row.orientation = .horizontal
-        row.alignment = .centerY
-        row.spacing = 10
-
-        let labelView = NSTextField(labelWithString: "Audio monitoring")
-        labelView.alignment = .right
-        labelView.widthAnchor.constraint(equalToConstant: 130).isActive = true
-
         monitoringModePopup.removeAllItems()
         for mode in AudioMonitoringMode.allCases {
             monitoringModePopup.addItem(withTitle: mode.label)
@@ -114,80 +132,106 @@ final class PreferencesWindowController {
         monitoringModePopup.target = self
         monitoringModePopup.action = #selector(monitoringModeChanged)
         monitoringModePopup.widthAnchor.constraint(equalToConstant: 220).isActive = true
+        return controlRow(FlowSoundStrings.text(.audioMonitoring), monitoringModePopup)
+    }
 
-        let helpView = NSTextField(labelWithString: "Default: all apps except Apple Music.")
+    private func makeOptionsSection() -> NSStackView {
+        let section = NSStackView()
+        section.orientation = .vertical
+        section.alignment = .leading
+        section.spacing = 8
+
+        showsMenuBarTextCheckbox.target = self
+        launchAtLoginCheckbox.target = self
+        loginItemStatusLabel.textColor = .secondaryLabelColor
+
+        section.addArrangedSubview(showsMenuBarTextCheckbox)
+        section.addArrangedSubview(launchAtLoginCheckbox)
+        section.addArrangedSubview(loginItemStatusLabel)
+        return section
+    }
+
+    private func makeAdvancedSection() -> NSStackView {
+        let section = NSStackView()
+        section.orientation = .vertical
+        section.alignment = .leading
+        section.spacing = 8
+
+        advancedDisclosure.setButtonType(.pushOnPushOff)
+        advancedDisclosure.bezelStyle = .disclosure
+        advancedDisclosure.state = .off
+        advancedDisclosure.target = self
+        advancedDisclosure.action = #selector(toggleAdvanced)
+        section.addArrangedSubview(advancedDisclosure)
+
+        let help = NSTextField(wrappingLabelWithString: FlowSoundStrings.text(.advancedHelp))
+        help.textColor = .secondaryLabelColor
+        help.widthAnchor.constraint(equalToConstant: 620).isActive = true
+        section.addArrangedSubview(help)
+
+        advancedContainer.orientation = .vertical
+        advancedContainer.alignment = .leading
+        advancedContainer.spacing = 10
+        advancedContainer.isHidden = true
+        advancedContainer.addArrangedSubview(makeBundleIdentifierEditor(
+            title: FlowSoundStrings.text(.watchedApps),
+            help: FlowSoundStrings.text(.watchedAppsHelp),
+            textView: watchedBundleIdentifiersTextView,
+            height: 96
+        ))
+        advancedContainer.addArrangedSubview(makeBundleIdentifierEditor(
+            title: FlowSoundStrings.text(.excludedApps),
+            help: FlowSoundStrings.text(.excludedAppsHelp),
+            textView: excludedBundleIdentifiersTextView,
+            height: 86
+        ))
+        section.addArrangedSubview(advancedContainer)
+
+        return section
+    }
+
+    private func makeBundleIdentifierEditor(title: String, help: String, textView: NSTextView, height: CGFloat) -> NSStackView {
+        let section = NSStackView()
+        section.orientation = .vertical
+        section.alignment = .leading
+        section.spacing = 6
+
+        let label = NSTextField(labelWithString: title)
+        label.font = .systemFont(ofSize: 12, weight: .medium)
+        section.addArrangedSubview(label)
+
+        let helpView = NSTextField(wrappingLabelWithString: help)
         helpView.textColor = .secondaryLabelColor
-        helpView.lineBreakMode = .byTruncatingTail
-        helpView.maximumNumberOfLines = 1
-        helpView.widthAnchor.constraint(equalToConstant: 230).isActive = true
+        helpView.widthAnchor.constraint(equalToConstant: 620).isActive = true
+        section.addArrangedSubview(helpView)
 
-        row.addArrangedSubview(labelView)
-        row.addArrangedSubview(monitoringModePopup)
-        row.addArrangedSubview(helpView)
+        configureBundleIdentifierTextView(textView)
+
+        let scrollView = NSScrollView()
+        scrollView.borderType = .bezelBorder
+        scrollView.hasVerticalScroller = true
+        scrollView.documentView = textView
+        scrollView.widthAnchor.constraint(equalToConstant: 620).isActive = true
+        scrollView.heightAnchor.constraint(equalToConstant: height).isActive = true
+        section.addArrangedSubview(scrollView)
+        return section
+    }
+
+    private func makeButtonRow() -> NSStackView {
+        let row = NSStackView()
+        row.orientation = .horizontal
+        row.spacing = 10
+        let resetButton = NSButton(title: FlowSoundStrings.text(.resetDefaults), target: self, action: #selector(resetDefaults))
+        let loginItemsButton = NSButton(title: FlowSoundStrings.text(.openLoginItems), target: self, action: #selector(openLoginItems))
+        let saveButton = NSButton(title: FlowSoundStrings.text(.save), target: self, action: #selector(save))
+        saveButton.keyEquivalent = "\r"
+        row.addArrangedSubview(resetButton)
+        row.addArrangedSubview(loginItemsButton)
+        row.addArrangedSubview(saveButton)
         return row
     }
 
-    private func makeWatchedAppsEditor() -> NSStackView {
-        let section = NSStackView()
-        section.orientation = .vertical
-        section.alignment = .leading
-        section.spacing = 6
-
-        let label = NSTextField(labelWithString: "Watched app bundle identifiers")
-        label.font = .systemFont(ofSize: 13, weight: .semibold)
-        section.addArrangedSubview(label)
-
-        let help = NSTextField(labelWithString: "Used only in Only watched apps mode. One bundle identifier per line.")
-        help.textColor = .secondaryLabelColor
-        help.lineBreakMode = .byTruncatingTail
-        help.maximumNumberOfLines = 1
-        help.widthAnchor.constraint(equalToConstant: 590).isActive = true
-        section.addArrangedSubview(help)
-
-        configureBundleIdentifierTextView(watchedBundleIdentifiersTextView)
-
-        let scrollView = NSScrollView()
-        scrollView.borderType = .bezelBorder
-        scrollView.hasVerticalScroller = true
-        scrollView.documentView = watchedBundleIdentifiersTextView
-        scrollView.widthAnchor.constraint(equalToConstant: 590).isActive = true
-        scrollView.heightAnchor.constraint(equalToConstant: 96).isActive = true
-        section.addArrangedSubview(scrollView)
-
-        return section
-    }
-
-    private func makeExcludedAppsEditor() -> NSStackView {
-        let section = NSStackView()
-        section.orientation = .vertical
-        section.alignment = .leading
-        section.spacing = 6
-
-        let label = NSTextField(labelWithString: "Excluded app bundle identifiers")
-        label.font = .systemFont(ofSize: 13, weight: .semibold)
-        section.addArrangedSubview(label)
-
-        let help = NSTextField(labelWithString: "Used in All apps except Apple Music mode. Add notification daemons or apps to ignore.")
-        help.textColor = .secondaryLabelColor
-        help.lineBreakMode = .byTruncatingTail
-        help.maximumNumberOfLines = 1
-        help.widthAnchor.constraint(equalToConstant: 590).isActive = true
-        section.addArrangedSubview(help)
-
-        configureBundleIdentifierTextView(excludedBundleIdentifiersTextView)
-
-        let scrollView = NSScrollView()
-        scrollView.borderType = .bezelBorder
-        scrollView.hasVerticalScroller = true
-        scrollView.documentView = excludedBundleIdentifiersTextView
-        scrollView.widthAnchor.constraint(equalToConstant: 590).isActive = true
-        scrollView.heightAnchor.constraint(equalToConstant: 76).isActive = true
-        section.addArrangedSubview(scrollView)
-
-        return section
-    }
-
-    private func formRow(_ label: String, _ field: NSTextField, _ help: String) -> NSStackView {
+    private func controlRow(_ label: String, _ control: NSView) -> NSStackView {
         let row = NSStackView()
         row.orientation = .horizontal
         row.alignment = .centerY
@@ -195,27 +239,33 @@ final class PreferencesWindowController {
 
         let labelView = NSTextField(labelWithString: label)
         labelView.alignment = .right
-        labelView.widthAnchor.constraint(equalToConstant: 130).isActive = true
+        labelView.widthAnchor.constraint(equalToConstant: 138).isActive = true
+
+        row.addArrangedSubview(labelView)
+        row.addArrangedSubview(control)
+        return row
+    }
+
+    private func formRow(_ label: String, _ field: NSTextField, _ help: String) -> NSStackView {
+        let row = controlRow(label, field)
 
         field.alignment = .right
         field.placeholderString = "0.0"
         field.toolTip = help
-        field.widthAnchor.constraint(equalToConstant: 90).isActive = true
+        field.widthAnchor.constraint(equalToConstant: 86).isActive = true
 
         let helpView = NSTextField(labelWithString: help)
         helpView.textColor = .secondaryLabelColor
         helpView.lineBreakMode = .byTruncatingTail
         helpView.maximumNumberOfLines = 1
-        helpView.widthAnchor.constraint(equalToConstant: 330).isActive = true
-
-        row.addArrangedSubview(labelView)
-        row.addArrangedSubview(field)
+        helpView.widthAnchor.constraint(equalToConstant: 360).isActive = true
         row.addArrangedSubview(helpView)
         return row
     }
 
     private func populateFields() {
         let settings = settingsStore.settings
+        selectMusicPlayer(settings.controlledMusicPlayer)
         selectMonitoringMode(settings.monitoringMode)
         activeThresholdField.stringValue = Self.format(settings.activeThreshold)
         activeDurationField.stringValue = Self.format(settings.activeDuration)
@@ -229,11 +279,12 @@ final class PreferencesWindowController {
         loadedLaunchAtLoginState = launchAtLoginState
         launchAtLoginCheckbox.state = launchAtLoginState ? .on : .off
         loginItemStatusLabel.stringValue = LoginItemController.statusText
-        updateWatchedAppsEditorAvailability()
+        updateBundleIdentifierEditorAvailability()
     }
 
     @objc private func save() {
         var settings = settingsStore.settings
+        settings.controlledMusicPlayer = selectedMusicPlayer()
         settings.monitoringMode = selectedMonitoringMode()
         settings.activeThreshold = clampedDouble(activeThresholdField, fallback: settings.activeThreshold, range: 0.001...1.0)
         settings.activeDuration = clampedDouble(activeDurationField, fallback: settings.activeDuration, range: 0.1...10.0)
@@ -268,6 +319,20 @@ final class PreferencesWindowController {
         String(format: "%.3g", value)
     }
 
+    private func selectMusicPlayer(_ player: ControlledMusicPlayer) {
+        let index = ControlledMusicPlayer.allCases.firstIndex(of: player) ?? 0
+        musicPlayerPopup.selectItem(at: index)
+    }
+
+    private func selectedMusicPlayer() -> ControlledMusicPlayer {
+        guard let rawValue = musicPlayerPopup.selectedItem?.representedObject as? String,
+              let player = ControlledMusicPlayer(rawValue: rawValue)
+        else {
+            return .appleMusic
+        }
+        return player
+    }
+
     private func selectMonitoringMode(_ mode: AudioMonitoringMode) {
         let index = AudioMonitoringMode.allCases.firstIndex(of: mode) ?? 0
         monitoringModePopup.selectItem(at: index)
@@ -282,7 +347,7 @@ final class PreferencesWindowController {
         return mode
     }
 
-    private func updateWatchedAppsEditorAvailability() {
+    private func updateBundleIdentifierEditorAvailability() {
         let isWatchedAppsMode = selectedMonitoringMode() == .watchedApps
         watchedBundleIdentifiersTextView.isEditable = isWatchedAppsMode
         watchedBundleIdentifiersTextView.textColor = isWatchedAppsMode ? .labelColor : .secondaryLabelColor
@@ -293,7 +358,12 @@ final class PreferencesWindowController {
     }
 
     @objc private func monitoringModeChanged() {
-        updateWatchedAppsEditorAvailability()
+        updateBundleIdentifierEditorAvailability()
+    }
+
+    @objc private func toggleAdvanced() {
+        advancedContainer.isHidden = advancedDisclosure.state != .on
+        window?.layoutIfNeeded()
     }
 
     private func configureBundleIdentifierTextView(_ textView: NSTextView) {
@@ -319,7 +389,7 @@ final class PreferencesWindowController {
             loginItemStatusLabel.stringValue = LoginItemController.statusText
         } catch {
             loginItemStatusLabel.textColor = .systemRed
-            loginItemStatusLabel.stringValue = "Could not update launch at login: \(error.localizedDescription)"
+            loginItemStatusLabel.stringValue = FlowSoundStrings.text(.automationUnavailable(error.localizedDescription))
         }
     }
 

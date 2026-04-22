@@ -2,8 +2,8 @@
 
 ## Development Setup
 
-1. Use macOS 26 or newer.
-2. Install Xcode with the macOS 26 SDK.
+1. Use macOS 15 or newer.
+2. Install Xcode with a recent macOS SDK. Release builds currently use Xcode 26.
 3. Install Xcode Command Line Tools.
 4. Initialize Git before implementation work begins.
 5. Open the Xcode project once it exists and confirm signing settings.
@@ -57,6 +57,7 @@ Default behavior:
 - Builds `FlowSound.app` with SwiftPM release configuration.
 - Creates `dist/FlowSound-<version>.zip`.
 - Creates `dist/SHA256SUMS.txt`.
+- Creates `dist/RELEASE_NOTES.md` from `docs/RELEASE_NOTES_TEMPLATE.md` and the matching `CHANGELOG.md` version section.
 
 Optional signed and notarized behavior:
 
@@ -106,7 +107,7 @@ Keep the landing page copy straightforward. The page should explain what FlowSou
 
 - Keep business logic testable outside the menu bar UI.
 - Put Core Audio code behind a narrow `AudioWatcher` interface.
-- Put Apple Music automation behind a narrow `MusicController` interface.
+- Put music app automation behind a narrow `MusicController` interface.
 - Do not let AppleScript own state transitions.
 - Keep permission errors visible in app state and logs.
 
@@ -126,9 +127,10 @@ Before merging functional changes:
 - Manually test watched-app-only mode after changing the monitoring mode in Preferences.
 - Manually test a custom watched bundle identifier from Preferences, then reset defaults.
 - Save Preferences repeatedly while launch-at-login requires approval and confirm System Settings does not gain duplicate login items.
-- Interrupt a restore by starting watched audio again during fade-in, then confirm Apple Music eventually returns to the original pre-duck volume.
-- Confirm Apple Music does not resume when the user paused it manually.
-- Confirm FlowSound skips ducking when Apple Music is paused or stopped before watched audio starts.
+- Interrupt a restore by starting watched audio again during fade-in, then confirm the selected music app eventually returns to the original pre-duck volume.
+- Confirm the selected music app does not resume when the user paused it manually.
+- Confirm FlowSound skips ducking when the selected music app is paused or stopped before watched audio starts.
+- Manually test Apple Music and Spotify as the selected music app.
 - Confirm disabling the service cancels active fades and timers.
 - For public releases, verify the zip checksum, install from `/Applications`, confirm Gatekeeper opens the app, confirm the app is notarized, and confirm first-run permission prompts are understandable.
 - For unsigned tester releases, unzip the archive and run `codesign --verify --deep --strict --verbose=2 FlowSound.app` before publishing.

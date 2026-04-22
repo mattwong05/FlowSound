@@ -32,11 +32,11 @@ final class AboutWindowController {
         title.font = .systemFont(ofSize: 24, weight: .semibold)
         contentView.addArrangedSubview(title)
 
-        let version = NSTextField(labelWithString: "Version \(Self.appVersion)")
+        let version = NSTextField(labelWithString: FlowSoundStrings.text(.version(Self.appVersion)))
         version.textColor = .secondaryLabelColor
         contentView.addArrangedSubview(version)
 
-        let detail = NSTextField(wrappingLabelWithString: "A menu bar controller for fading Apple Music around other app audio.")
+        let detail = NSTextField(wrappingLabelWithString: FlowSoundStrings.text(.aboutDetail))
         detail.alignment = .center
         detail.maximumNumberOfLines = 2
         contentView.addArrangedSubview(detail)
@@ -47,7 +47,7 @@ final class AboutWindowController {
             backing: .buffered,
             defer: false
         )
-        aboutWindow.title = "About FlowSound"
+        aboutWindow.title = FlowSoundStrings.text(.aboutTitle)
         aboutWindow.contentView = contentView
         aboutWindow.center()
         aboutWindow.isReleasedWhenClosed = false
@@ -74,6 +74,6 @@ final class AboutWindowController {
     }
 
     private static var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.12.2"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.13.0"
     }
 }

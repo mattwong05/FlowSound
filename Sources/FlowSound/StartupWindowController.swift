@@ -17,15 +17,15 @@ final class StartupWindowController {
         contentView.spacing = 12
         contentView.edgeInsets = NSEdgeInsets(top: 22, left: 22, bottom: 22, right: 22)
 
-        let title = NSTextField(labelWithString: "FlowSound is running")
+        let title = NSTextField(labelWithString: FlowSoundStrings.text(.startupTitle))
         title.font = .systemFont(ofSize: 22, weight: .semibold)
         contentView.addArrangedSubview(title)
 
-        let message = NSTextField(wrappingLabelWithString: "FlowSound runs from the macOS menu bar. If the menu bar item is hidden by macOS or a menu bar manager, this window confirms the app launched correctly.")
+        let message = NSTextField(wrappingLabelWithString: FlowSoundStrings.text(.startupMessage))
         message.maximumNumberOfLines = 3
         contentView.addArrangedSubview(message)
 
-        let diagnostics = NSTextField(wrappingLabelWithString: "Diagnostics log:\n\(FlowSoundDiagnostics.logPath)")
+        let diagnostics = NSTextField(wrappingLabelWithString: FlowSoundStrings.text(.startupDiagnostics(FlowSoundDiagnostics.logPath)))
         diagnostics.textColor = .secondaryLabelColor
         diagnostics.maximumNumberOfLines = 3
         contentView.addArrangedSubview(diagnostics)
@@ -35,8 +35,8 @@ final class StartupWindowController {
         buttonRow.alignment = .centerY
         buttonRow.spacing = 10
 
-        let copyButton = NSButton(title: "Copy Log Path", target: self, action: #selector(copyDiagnosticsPath))
-        let closeButton = NSButton(title: "Close", target: self, action: #selector(close))
+        let copyButton = NSButton(title: FlowSoundStrings.text(.startupCopyLogPath), target: self, action: #selector(copyDiagnosticsPath))
+        let closeButton = NSButton(title: FlowSoundStrings.text(.startupClose), target: self, action: #selector(close))
         buttonRow.addArrangedSubview(copyButton)
         buttonRow.addArrangedSubview(closeButton)
         contentView.addArrangedSubview(buttonRow)

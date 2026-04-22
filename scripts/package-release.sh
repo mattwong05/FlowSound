@@ -9,6 +9,8 @@ ARCHIVE_NAME="FlowSound-$VERSION.zip"
 ARCHIVE_PATH="$DIST_DIR/$ARCHIVE_NAME"
 CHECKSUM_PATH="$DIST_DIR/SHA256SUMS.txt"
 RELEASE_NOTES_PATH="$DIST_DIR/RELEASE_NOTES.md"
+RELEASE_NOTES_TEMPLATE="$ROOT_DIR/docs/RELEASE_NOTES_TEMPLATE.md"
+CHANGELOG_EXCERPT_PATH="$DIST_DIR/CHANGELOG_EXCERPT.md"
 CONFIGURATION="${CONFIGURATION:-release}"
 SIGN_IDENTITY="${SIGN_IDENTITY:-}"
 NOTARIZE="${NOTARIZE:-0}"
@@ -57,7 +59,24 @@ fi
     shasum -a 256 "$ARCHIVE_NAME" > "$CHECKSUM_PATH"
 )
 
-sed "s/VERSION/$VERSION/g" "$ROOT_DIR/docs/RELEASE_NOTES_TEMPLATE.md" > "$RELEASE_NOTES_PATH"
+awk -v version="$VERSION" '
+    $0 ~ "^## \\[" version "\\]" { found = 1; next }
+    found && $0 ~ "^## \\[" { exit }
+    found { print }
+' "$ROOT_DIR/CHANGELOG.md" > "$CHANGELOG_EXCERPT_PATH"
+
+if [[ ! -s "$CHANGELOG_EXCERPT_PATH" ]]; then
+    echo "- See CHANGELOG.md for release details." > "$CHANGELOG_EXCERPT_PATH"
+fi
+
+sed "s/VERSION/$VERSION/g" "$RELEASE_NOTES_TEMPLATE" | while IFS= read -r line; do
+    if [[ "$line" == "- Replace this section with the release changelog." ]]; then
+        cat "$CHANGELOG_EXCERPT_PATH"
+    else
+        echo "$line"
+    fi
+done > "$RELEASE_NOTES_PATH"
+rm -f "$CHANGELOG_EXCERPT_PATH"
 
 echo "$ARCHIVE_PATH"
 echo "$CHECKSUM_PATH"

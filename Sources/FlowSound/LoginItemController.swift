@@ -20,15 +20,15 @@ enum LoginItemController {
     static var statusText: String {
         switch SMAppService.mainApp.status {
         case .enabled:
-            "Launch at login is enabled."
+            FlowSoundStrings.text(.launchAtLoginEnabled)
         case .notRegistered:
-            "Launch at login is disabled."
+            FlowSoundStrings.text(.launchAtLoginDisabled)
         case .requiresApproval:
-            "Launch at login requires approval in System Settings."
+            FlowSoundStrings.text(.launchAtLoginRequiresApproval)
         case .notFound:
-            "Launch at login is not registered for this build."
+            FlowSoundStrings.text(.launchAtLoginNotFound)
         @unknown default:
-            "Launch at login status is unknown."
+            FlowSoundStrings.text(.launchAtLoginUnknown)
         }
     }
 

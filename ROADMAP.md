@@ -83,8 +83,15 @@
 - Support English and Simplified Chinese.
 - Deploy with Cloudflare Pages.
 
+## 0.13.x Music Apps and Compatibility
+
+- Lower the supported runtime target to macOS 15+ with a process-object-ID tap fallback for macOS 15-25.
+- Add Spotify as a selectable music app controlled through AppleScript.
+- Add English and Simplified Chinese app UI based on system language, defaulting to English.
+- Redesign Preferences with clearer sections and advanced bundle identifier filters collapsed by default.
+
 ## 1.0.0 Release Candidate
 
 - Finalize signed and notarized distribution.
-- Validate on a fresh macOS 26+ machine.
+- Validate on fresh macOS 15+ and macOS 26+ machines.
 - Freeze MVP behavior and documentation.

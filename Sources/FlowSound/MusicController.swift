@@ -1,6 +1,7 @@
 import Foundation
 
 protocol MusicController: Sendable {
+    var playerName: String { get }
     func currentVolume() async throws -> Int
     func playbackState() async throws -> MusicPlaybackState
     func setVolume(_ volume: Int) async throws
@@ -16,28 +17,38 @@ enum MusicPlaybackState: Sendable, Equatable {
 }
 
 enum MusicControllerError: LocalizedError {
-    case commandFailed(String)
-    case invalidVolume(String)
+    case commandFailed(playerName: String, message: String)
+    case invalidVolume(playerName: String, output: String)
 
     var errorDescription: String? {
         switch self {
-        case .commandFailed(let message):
-            "Apple Music command failed: \(message)"
-        case .invalidVolume(let output):
-            "Apple Music returned an invalid volume: \(output)"
+        case .commandFailed(let playerName, let message):
+            "\(playerName) command failed: \(message)"
+        case .invalidVolume(let playerName, let output):
+            "\(playerName) returned an invalid volume: \(output)"
         }
     }
 }
 
 struct AppleScriptMusicController: MusicController {
+    let player: ControlledMusicPlayer
+
+    init(player: ControlledMusicPlayer = .appleMusic) {
+        self.player = player
+    }
+
+    var playerName: String {
+        player.displayName
+    }
+
     func currentVolume() async throws -> Int {
         let output = try await runAppleScript("""
-        tell application "Music"
+        tell application "\(player.appleScriptApplicationName)"
             sound volume
         end tell
         """)
         guard let volume = Int(output.trimmingCharacters(in: .whitespacesAndNewlines)) else {
-            throw MusicControllerError.invalidVolume(output)
+            throw MusicControllerError.invalidVolume(playerName: playerName, output: output)
         }
         return max(0, min(100, volume))
     }
@@ -45,7 +56,7 @@ struct AppleScriptMusicController: MusicController {
     func setVolume(_ volume: Int) async throws {
         let clampedVolume = max(0, min(100, volume))
         _ = try await runAppleScript("""
-        tell application "Music"
+        tell application "\(player.appleScriptApplicationName)"
             set sound volume to \(clampedVolume)
         end tell
         """)
@@ -53,7 +64,7 @@ struct AppleScriptMusicController: MusicController {
 
     func playbackState() async throws -> MusicPlaybackState {
         let output = try await runAppleScript("""
-        tell application "Music"
+        tell application "\(player.appleScriptApplicationName)"
             player state as string
         end tell
         """)
@@ -72,7 +83,7 @@ struct AppleScriptMusicController: MusicController {
 
     func play() async throws {
         _ = try await runAppleScript("""
-        tell application "Music"
+        tell application "\(player.appleScriptApplicationName)"
             play
         end tell
         """)
@@ -80,7 +91,7 @@ struct AppleScriptMusicController: MusicController {
 
     func pause() async throws {
         _ = try await runAppleScript("""
-        tell application "Music"
+        tell application "\(player.appleScriptApplicationName)"
             pause
         end tell
         """)
@@ -109,7 +120,10 @@ struct AppleScriptMusicController: MusicController {
             ) ?? ""
 
             guard process.terminationStatus == 0 else {
-                throw MusicControllerError.commandFailed(error.trimmingCharacters(in: .whitespacesAndNewlines))
+                throw MusicControllerError.commandFailed(
+                    playerName: playerName,
+                    message: error.trimmingCharacters(in: .whitespacesAndNewlines)
+                )
             }
             return output
         }.value

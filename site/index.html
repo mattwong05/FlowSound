@@ -7,12 +7,12 @@
     <title>FlowSound</title>
     <meta
       name="description"
-      content="FlowSound is a tiny open-source macOS menu bar app that auto-fades Apple Music when other apps play audio."
+      content="FlowSound is a tiny open-source macOS menu bar app that auto-fades Apple Music or Spotify when other apps play audio."
     >
     <meta property="og:title" content="FlowSound">
     <meta
       property="og:description"
-      content="A tiny open-source macOS menu bar app that auto-fades Apple Music when other apps play audio."
+      content="A tiny open-source macOS menu bar app that auto-fades Apple Music or Spotify when other apps play audio."
     >
     <meta property="og:type" content="website">
     <meta property="og:image" content="/assets/flowsound-logo-light.png">
@@ -42,9 +42,9 @@
       <section class="hero">
         <div class="hero-copy">
           <p class="eyebrow" data-i18n="eyebrow">Open-source macOS menu bar app</p>
-          <h1 data-i18n="heroTitle">Apple Music that knows when to step aside.</h1>
+          <h1 data-i18n="heroTitle">Music that knows when to step aside.</h1>
           <p class="hero-text" data-i18n="heroText">
-            FlowSound fades and pauses Apple Music when other apps play audio, then restores it when things become quiet again.
+            FlowSound fades and pauses Apple Music or Spotify when other apps play audio, then restores it when things become quiet again.
           </p>
           <div class="actions">
             <a class="button primary" data-i18n="download" href="https://github.com/mattwong05/FlowSound/releases/latest">
@@ -55,7 +55,7 @@
             </a>
           </div>
           <p class="note" data-i18n="heroNote">
-            Built for macOS 26+. Apple Music only. Local-first, no analytics.
+            Built for macOS 15+. Apple Music and Spotify. Local-first, no analytics.
           </p>
           <div class="product-hunt-badge">
             <span data-i18n="productHuntLabel">Featured on</span>
@@ -70,7 +70,7 @@
                   media="(prefers-color-scheme: dark)"
                 >
                 <img
-                  alt="FlowSound - Auto-fade Apple Music when other apps play audio | Product Hunt"
+                  alt="FlowSound - Auto-fade Apple Music or Spotify when other apps play audio | Product Hunt"
                   width="250"
                   height="54"
                   src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1129148&amp;theme=light&amp;t=1776791197737"
@@ -81,7 +81,7 @@
         </div>
         <div class="hero-side">
           <div class="visual-header">
-            <p class="hero-side-kicker" data-i18n="focusKicker">Audio focus for Apple Music</p>
+            <p class="hero-side-kicker" data-i18n="focusKicker">Audio focus for your music app</p>
             <h2 data-i18n="focusTitle">No overlap. No sudden silence.</h2>
           </div>
 
@@ -92,7 +92,7 @@
                 <span data-i18n="withoutBadge">manual</span>
               </div>
               <div class="track-row">
-                <span data-i18n="appleMusicLabel">Apple Music</span>
+                <span data-i18n="appleMusicLabel">Apple Music / Spotify</span>
                 <div class="track-line music-line full-line"></div>
               </div>
               <div class="track-row">
@@ -108,7 +108,7 @@
                 <span data-i18n="withBadge">automatic</span>
               </div>
               <div class="track-row">
-                <span data-i18n="appleMusicLabel">Apple Music</span>
+                <span data-i18n="appleMusicLabel">Apple Music / Spotify</span>
                 <div class="timeline">
                   <i class="music-play"></i>
                   <i class="music-fade-out"></i>
@@ -144,7 +144,7 @@
           <p class="eyebrow" data-i18n="demoEyebrow">Demo</p>
           <h2 data-i18n="demoTitle">Watch FlowSound react to other audio.</h2>
           <p data-i18n="demoText">
-            The menu bar app listens for app audio activity, fades Apple Music out, pauses it, then restores the previous volume.
+            The menu bar app listens for app audio activity, fades your selected music app out, pauses it, then restores the previous volume.
           </p>
         </div>
         <div class="video-wrap">
@@ -173,7 +173,7 @@
           </article>
           <article>
             <h3 data-i18n="sourceTitle">Open source</h3>
-            <p data-i18n="sourceText">Built in Swift with Core Audio and Apple Music automation.</p>
+            <p data-i18n="sourceText">Built in Swift with Core Audio and local music app automation.</p>
           </article>
         </div>
       </section>
@@ -193,7 +193,7 @@
           </div>
           <div>
             <h3 data-i18n="automationTitle">Automation</h3>
-            <p data-i18n="automationText">Used to control Apple Music volume and playback.</p>
+            <p data-i18n="automationText">Used to control Apple Music or Spotify volume and playback.</p>
           </div>
           <div>
             <h3 data-i18n="loginTitle">Login Item</h3>
@@ -218,7 +218,7 @@
           </details>
           <details>
             <summary data-i18n="faqSpotifyQ">Does it work with Spotify?</summary>
-            <p data-i18n="faqSpotifyA">Not yet. FlowSound currently supports Apple Music only.</p>
+            <p data-i18n="faqSpotifyA">Yes. FlowSound supports Apple Music and Spotify through local AppleScript.</p>
           </details>
           <details>
             <summary data-i18n="faqWarningQ">Why does macOS warn me when opening it?</summary>

@@ -9,17 +9,21 @@ enum DuckingState: Sendable, Equatable {
     case error(String)
 
     var label: String {
+        label(playerName: ControlledMusicPlayer.appleMusic.displayName)
+    }
+
+    func label(playerName: String) -> String {
         switch self {
         case .disabled:
-            "Deactivated"
+            FlowSoundStrings.text(.deactivated)
         case .listening:
-            "Activated"
+            FlowSoundStrings.text(.activated)
         case .ducking:
-            "Ducking Apple Music"
+            FlowSoundStrings.text(.ducking(playerName))
         case .pausedByFlowSound:
-            "Apple Music paused"
+            FlowSoundStrings.text(.pausedByFlowSound(playerName))
         case .restoring:
-            "Restoring Apple Music"
+            FlowSoundStrings.text(.restoring(playerName))
         case .error(let message):
             "Error: \(message)"
         }

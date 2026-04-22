@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "FlowSound",
     platforms: [
-        .macOS(.v26)
+        .macOS(.v15)
     ],
     products: [
         .executable(name: "FlowSound", targets: ["FlowSound"])

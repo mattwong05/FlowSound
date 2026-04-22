@@ -114,20 +114,14 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
     private func startOnQueue(settings: FlowSoundSettings, sessionID: UUID) throws {
         let watchedBundleIdentifiers = FlowSoundSettings.expandedWatchedBundleIdentifiers(settings.watchedBundleIdentifiers)
         let excludedBundleIdentifiers = Self.excludedBundleIdentifiers(settings: settings)
-        let description = CATapDescription()
-        description.name = "FlowSound Watched Apps"
-        switch settings.monitoringMode {
-        case .allNonMusic:
-            description.bundleIDs = excludedBundleIdentifiers
-            description.isExclusive = true
-        case .watchedApps:
-            description.bundleIDs = watchedBundleIdentifiers
-            description.isExclusive = false
-        }
+        let description = try makeTapDescription(
+            settings: settings,
+            watchedBundleIdentifiers: watchedBundleIdentifiers,
+            excludedBundleIdentifiers: excludedBundleIdentifiers
+        )
         description.isMixdown = true
         description.isMono = false
         description.isPrivate = true
-        description.isProcessRestoreEnabled = true
         description.muteBehavior = .unmuted
 
         var createdTapID = AudioObjectID(kAudioObjectUnknown)
@@ -185,6 +179,41 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
         FlowSoundDiagnostics.log("Core Audio process tap starting device IO")
         try check(AudioDeviceStart(aggregateDeviceID, ioProcID), operation: "AudioDeviceStart")
         FlowSoundDiagnostics.log(Self.startedLogMessage(settings: settings, watchedBundleIDs: watchedBundleIdentifiers, excludedBundleIDs: excludedBundleIdentifiers))
+    }
+
+    private func makeTapDescription(
+        settings: FlowSoundSettings,
+        watchedBundleIdentifiers: [String],
+        excludedBundleIdentifiers: [String]
+    ) throws -> CATapDescription {
+        if #available(macOS 26.0, *) {
+            let description = CATapDescription()
+            description.name = "FlowSound Watched Apps"
+            switch settings.monitoringMode {
+            case .allNonMusic:
+                description.bundleIDs = excludedBundleIdentifiers
+                description.isExclusive = true
+            case .watchedApps:
+                description.bundleIDs = watchedBundleIdentifiers
+                description.isExclusive = false
+            }
+            description.isProcessRestoreEnabled = true
+            return description
+        }
+
+        let processIDs: [AudioObjectID]
+        let description: CATapDescription
+        switch settings.monitoringMode {
+        case .allNonMusic:
+            processIDs = try processObjectIDs(matching: Set(excludedBundleIdentifiers))
+            description = CATapDescription(stereoGlobalTapButExcludeProcesses: processIDs)
+        case .watchedApps:
+            processIDs = try processObjectIDs(matching: Set(watchedBundleIdentifiers))
+            description = CATapDescription(stereoMixdownOfProcesses: processIDs)
+        }
+        description.name = "FlowSound Watched Apps"
+        FlowSoundDiagnostics.log("Core Audio process tap using process IDs for macOS 15-25: \(processIDs.map(String.init).joined(separator: ", "))")
+        return description
     }
 
     private func cleanupOnQueue(emitQuiet shouldEmitQuiet: Bool) {
@@ -326,6 +355,19 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
         return matches
     }
 
+    private func processObjectIDs(matching bundleIdentifiers: Set<String>) throws -> [AudioObjectID] {
+        guard !bundleIdentifiers.isEmpty else { return [] }
+        let processIDs = try readAudioObjectIDArray(
+            objectID: AudioObjectID(kAudioObjectSystemObject),
+            selector: kAudioHardwarePropertyProcessObjectList
+        )
+
+        return processIDs.filter { processID in
+            guard let bundleID = try? readProcessBundleID(processID) else { return false }
+            return bundleIdentifiers.contains(bundleID)
+        }
+    }
+
     private func isWatchedProcess(bundleID: String, watched: Set<String>, excluded: Set<String>) -> Bool {
         switch monitoringMode {
         case .allNonMusic:
@@ -445,11 +487,7 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
     }
 
     private static func excludedBundleIdentifiers(settings: FlowSoundSettings) -> [String] {
-        var identifiers = FlowSoundSettings.validExcludedBundleIdentifiers(settings.excludedBundleIdentifiers)
-        if let bundleIdentifier = Bundle.main.bundleIdentifier {
-            identifiers.append(bundleIdentifier)
-        }
-        return FlowSoundSettings.normalizedBundleIdentifiers(identifiers)
+        FlowSoundSettings.effectiveExcludedBundleIdentifiers(for: settings)
     }
 
     private static func startLogMessage(
