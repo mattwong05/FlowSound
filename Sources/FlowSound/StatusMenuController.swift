@@ -5,7 +5,7 @@ final class StatusMenuController {
     private let service: FlowSoundService
     private let activityMonitor: SimulatableAudioActivityMonitor
     private let settingsStore: FlowSoundSettingsStore
-    private let statusItem = NSStatusBar.system.statusItem(withLength: 116)
+    private let statusItem = NSStatusBar.system.statusItem(withLength: 28)
     private let menu = NSMenu()
     private let aboutWindowController = AboutWindowController()
     private let diagnosticsWindowController = StartupWindowController()
@@ -16,8 +16,6 @@ final class StatusMenuController {
     private let simulateQuietItem = NSMenuItem(title: FlowSoundStrings.text(.menuSimulateQuiet), action: #selector(simulateQuiet), keyEquivalent: "")
     private let preferencesMenuItem = NSMenuItem(title: FlowSoundStrings.text(.menuPreferences), action: #selector(showPreferences), keyEquivalent: ",")
     private let aboutMenuItem = NSMenuItem(title: FlowSoundStrings.text(.menuAbout), action: #selector(showAbout), keyEquivalent: "")
-    private let showDiagnosticsMenuItem = NSMenuItem(title: FlowSoundStrings.text(.menuShowDiagnostics), action: #selector(showDiagnostics), keyEquivalent: "")
-    private let diagnosticsMenuItem = NSMenuItem(title: FlowSoundStrings.text(.menuCopyDiagnostics), action: #selector(copyDiagnosticsPath), keyEquivalent: "")
 
     init(
         service: FlowSoundService,
@@ -43,10 +41,12 @@ final class StatusMenuController {
 
     func applySettings(_ settings: FlowSoundSettings) {
         guard let button = statusItem.button else { return }
-        button.title = settings.showsMenuBarText ? "FlowSound" : ""
-        button.imagePosition = settings.showsMenuBarText ? .imageLeading : .imageOnly
-        statusItem.length = settings.showsMenuBarText ? 116 : 28
-        FlowSoundDiagnostics.log("menu bar text visibility: \(settings.showsMenuBarText)")
+        button.title = ""
+        button.imagePosition = .imageOnly
+        statusItem.length = 28
+        FlowSoundDiagnostics.log("menu bar text visibility: false")
+        refreshMenuTitles()
+        render(service.state)
     }
 
     private func configureStatusButton() {
@@ -55,8 +55,8 @@ final class StatusMenuController {
             return
         }
 
-        button.title = settingsStore.settings.showsMenuBarText ? "FlowSound" : ""
-        button.imagePosition = .imageLeading
+        button.title = ""
+        button.imagePosition = .imageOnly
         button.toolTip = "FlowSound"
 
         updateStatusIcon(for: service.state)
@@ -68,8 +68,6 @@ final class StatusMenuController {
         simulateQuietItem.target = self
         preferencesMenuItem.target = self
         aboutMenuItem.target = self
-        showDiagnosticsMenuItem.target = self
-        diagnosticsMenuItem.target = self
 
         menu.addItem(statusMenuItem)
         menu.addItem(.separator())
@@ -80,8 +78,6 @@ final class StatusMenuController {
         menu.addItem(.separator())
         menu.addItem(preferencesMenuItem)
         menu.addItem(aboutMenuItem)
-        menu.addItem(showDiagnosticsMenuItem)
-        menu.addItem(diagnosticsMenuItem)
         menu.addItem(NSMenuItem(title: FlowSoundStrings.text(.menuQuit), action: #selector(quit), keyEquivalent: "q"))
         menu.items.last?.target = self
         statusItem.menu = menu
@@ -100,6 +96,14 @@ final class StatusMenuController {
             button.toolTip = "FlowSound: \(label)"
         }
         updateStatusIcon(for: state)
+    }
+
+    private func refreshMenuTitles() {
+        preferencesMenuItem.title = FlowSoundStrings.text(.menuPreferences)
+        aboutMenuItem.title = FlowSoundStrings.text(.menuAbout)
+        simulateActiveItem.title = FlowSoundStrings.text(.menuSimulateActive)
+        simulateQuietItem.title = FlowSoundStrings.text(.menuSimulateQuiet)
+        menu.items.last?.title = FlowSoundStrings.text(.menuQuit)
     }
 
     @objc private func toggleEnabled() {
@@ -126,11 +130,11 @@ final class StatusMenuController {
         preferencesWindowController.show()
     }
 
-    @objc private func showDiagnostics() {
+    func showDiagnostics() {
         diagnosticsWindowController.show()
     }
 
-    @objc private func copyDiagnosticsPath() {
+    func copyDiagnosticsPath() {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(FlowSoundDiagnostics.logPath, forType: .string)
     }

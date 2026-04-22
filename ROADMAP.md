@@ -90,6 +90,13 @@
 - Add English and Simplified Chinese app UI based on system language, defaulting to English.
 - Redesign Preferences with clearer sections and advanced bundle identifier filters collapsed by default.
 
+## 0.14.x Preferences and Diagnostics
+
+- Add app language selection with System, English, and Simplified Chinese options.
+- Move Preferences into General, Monitoring, and Tools tabs.
+- Keep the menu bar item icon-only.
+- Add recently detected audio sources to help users discover bundle identifiers for watched and excluded app rules.
+
 ## 1.0.0 Release Candidate
 
 - Finalize signed and notarized distribution.

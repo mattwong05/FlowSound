@@ -61,7 +61,9 @@ The current build is a native Swift menu bar app with:
 - Split logo assets generated from `FlowSound-iCon.png`, including dark-background, light-background, and menu bar template variants.
 - An About window that chooses the light or dark FlowSound logo artwork based on appearance.
 - A localized English and Simplified Chinese interface selected from system language, defaulting to English.
-- A Preferences window for music app selection, audio monitoring mode, timing, menu bar text visibility, launch-at-login, and advanced bundle identifier filters.
+- A tabbed Preferences window for General, Monitoring, and Tools settings.
+- Language selection with System, English, and Simplified Chinese options.
+- A Tools panel that lists recently detected audio sources from the last 3 minutes with bundle identifier, pid, and watched/excluded status.
 - A generated `.icns` app icon bundled into `FlowSound.app`.
 - Default activation on launch, with manual Activate / Deactivate control from the menu bar.
 - Active and deactivated menu bar icons generated from the supplied icon artwork.
@@ -91,7 +93,7 @@ FlowSound is implemented as a native Swift app:
 - Signal analysis: short-window RMS or peak detection.
 - Music app control: AppleScript executed through a narrow Swift wrapper for Apple Music or Spotify.
 - Coordination: explicit state machine to avoid repeated pause/resume loops.
-- Configuration: local settings for selected music app, monitoring mode, whitelist, exclusions, thresholds, fade durations, language-aware UI, and enablement.
+- Configuration: local settings for selected music app, language, monitoring mode, whitelist, exclusions, thresholds, fade durations, and enablement.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/TECHNICAL_FEASIBILITY.md](docs/TECHNICAL_FEASIBILITY.md) for details.
 
@@ -171,19 +173,13 @@ The app icon is generated as `Assets/FlowSound.icns` during packaging and copied
 
 Open `Preferences...` from the menu bar menu to configure:
 
-- Music app: Apple Music or Spotify.
-- Audio monitoring mode: all apps except the selected music app, or only watched apps.
-- Active threshold.
-- Active duration.
-- Quiet duration.
-- Fade-out duration.
-- Fade-in duration.
-- Whether the menu bar shows the `FlowSound` text label or only the icon.
-- Whether FlowSound launches at login.
-- Advanced: excluded app bundle identifiers, one per line, used in all-apps mode.
-- Advanced: watched app bundle identifiers, one per line.
+- General: language, music app, timing, and launch at login.
+- Monitoring: audio monitoring mode, watched app bundle identifiers, and excluded app bundle identifiers.
+- Tools: recently detected audio sources, diagnostics window, and diagnostics log path.
 
 FlowSound validates bundle identifiers before saving. Invalid values are ignored and duplicates are removed. An empty watched list falls back to Safari and Telegram; an empty excluded list falls back to Apple Music, FlowSound, and common macOS notification services. The selected music app is always excluded from all-apps monitoring. Saving Preferences restarts the Core Audio process tap when FlowSound is active.
+
+The Tools tab keeps the raw bundle identifier workflow usable: play audio in another app, refresh Recently Detected Audio Sources, then copy the displayed bundle identifier into Watched apps or Excluded apps when needed. The list keeps sources detected in the last 3 minutes and marks each as watched, excluded, selected music app, or just detected.
 
 Notifications are mixed on macOS. Some alert sounds come from system notification services such as `com.apple.usernoted`; some apps play their own sounds from their own process. The excluded list can suppress system notification services by default, and you can add a noisy app bundle identifier manually if you prefer to ignore that app entirely.
 

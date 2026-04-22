@@ -5,8 +5,45 @@ enum FlowSoundLanguage: Sendable {
     case simplifiedChinese
 
     static var current: FlowSoundLanguage {
+        let preference = FlowSoundLanguagePreference(
+            rawValue: UserDefaults.standard.string(forKey: FlowSoundLanguagePreference.defaultsKey) ?? ""
+        ) ?? .system
+        if preference != .system {
+            return preference.language
+        }
         let languageCode = Locale.preferredLanguages.first?.lowercased() ?? ""
         return languageCode.hasPrefix("zh") ? .simplifiedChinese : .english
+    }
+}
+
+enum FlowSoundLanguagePreference: String, Sendable, Equatable, CaseIterable {
+    case system
+    case english
+    case simplifiedChinese
+
+    static let defaultsKey = "languagePreference"
+
+    var language: FlowSoundLanguage {
+        switch self {
+        case .system:
+            let languageCode = Locale.preferredLanguages.first?.lowercased() ?? ""
+            return languageCode.hasPrefix("zh") ? .simplifiedChinese : .english
+        case .english:
+            return .english
+        case .simplifiedChinese:
+            return .simplifiedChinese
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .system:
+            FlowSoundStrings.text(.languageSystem)
+        case .english:
+            "English"
+        case .simplifiedChinese:
+            "简体中文"
+        }
     }
 }
 
@@ -24,6 +61,10 @@ enum FlowSoundStrings {
         case advancedToggleHide
         case advancedToggleShow
         case allNonMusic
+        case appStatusExcluded
+        case appStatusWatched
+        case appStatusDetected
+        case appStatusSelectedMusic
         case audioMonitoring
         case audioMonitoringHelp
         case automationUnavailable(String)
@@ -41,6 +82,12 @@ enum FlowSoundStrings {
         case launchAtLoginNotFound
         case launchAtLoginRequiresApproval
         case launchAtLoginUnknown
+        case language
+        case languageHelp
+        case languageSystem
+        case monitoringTab
+        case generalTab
+        case toolsTab
         case menuActivate
         case menuDeactivate
         case menuAbout
@@ -58,10 +105,13 @@ enum FlowSoundStrings {
         case preferencesTitle
         case quietDuration
         case quietDurationHelp
+        case recentAudioSources
+        case recentAudioSourcesEmpty
+        case recentAudioSourcesHelp
+        case refresh
         case resetDefaults
         case restoring(String)
         case save
-        case showMenuBarText
         case status(String)
         case startupClose
         case startupCopyLogPath
@@ -70,6 +120,9 @@ enum FlowSoundStrings {
         case startupTitle
         case timing
         case timingHelp
+        case toolsDiagnostics
+        case toolsDiagnosticsHelp
+        case watchedAndExcludedHelp
         case watchedApps
         case watchedAppsHelp
         case version(String)
@@ -110,6 +163,14 @@ enum FlowSoundStrings {
             "Show bundle filters"
         case .allNonMusic:
             "All apps except music"
+        case .appStatusExcluded:
+            "Excluded"
+        case .appStatusWatched:
+            "Watched"
+        case .appStatusDetected:
+            "Detected"
+        case .appStatusSelectedMusic:
+            "Selected music app"
         case .audioMonitoring:
             "Audio monitoring"
         case .audioMonitoringHelp:
@@ -144,6 +205,18 @@ enum FlowSoundStrings {
             "Launch at login requires approval in System Settings."
         case .launchAtLoginUnknown:
             "Launch at login status is unknown."
+        case .language:
+            "Language"
+        case .languageHelp:
+            "Use System to follow macOS language. Changes apply after saving."
+        case .languageSystem:
+            "System"
+        case .monitoringTab:
+            "Monitoring"
+        case .generalTab:
+            "General"
+        case .toolsTab:
+            "Tools"
         case .menuActivate:
             "Activate FlowSound"
         case .menuDeactivate:
@@ -178,14 +251,20 @@ enum FlowSoundStrings {
             "Quiet duration"
         case .quietDurationHelp:
             "Seconds of quiet before restoring. Default: 3.0"
+        case .recentAudioSources:
+            "Recently Detected Audio Sources"
+        case .recentAudioSourcesEmpty:
+            "No audio sources detected in the last 3 minutes. Start audio in another app, then refresh this panel."
+        case .recentAudioSourcesHelp:
+            "Shows Core Audio processes that recently reported output. Use these bundle identifiers in Watched apps or Excluded apps when needed."
+        case .refresh:
+            "Refresh"
         case .resetDefaults:
             "Reset Defaults"
         case .restoring(let player):
             "Restoring \(player)"
         case .save:
             "Save"
-        case .showMenuBarText:
-            "Show FlowSound text in the menu bar"
         case .status(let state):
             "Status: \(state)"
         case .startupClose:
@@ -202,6 +281,12 @@ enum FlowSoundStrings {
             "Timing"
         case .timingHelp:
             "Tune how quickly FlowSound reacts and restores music."
+        case .toolsDiagnostics:
+            "Diagnostics"
+        case .toolsDiagnosticsHelp:
+            "Open the diagnostics window or copy the local log path."
+        case .watchedAndExcludedHelp:
+            "Use these raw bundle identifiers for browser helpers, notification daemons, and apps FlowSound cannot identify from a normal app picker."
         case .watchedApps:
             "Watched apps"
         case .watchedAppsHelp:
@@ -237,6 +322,14 @@ enum FlowSoundStrings {
             "显示 Bundle 过滤器"
         case .allNonMusic:
             "除音乐外的所有 App"
+        case .appStatusExcluded:
+            "已忽略"
+        case .appStatusWatched:
+            "已监听"
+        case .appStatusDetected:
+            "已检测到"
+        case .appStatusSelectedMusic:
+            "当前音乐 App"
         case .audioMonitoring:
             "音频监听"
         case .audioMonitoringHelp:
@@ -271,6 +364,18 @@ enum FlowSoundStrings {
             "开机自启需要在系统设置中批准。"
         case .launchAtLoginUnknown:
             "开机自启状态未知。"
+        case .language:
+            "语言"
+        case .languageHelp:
+            "选择“系统”时跟随 macOS 语言。保存后生效。"
+        case .languageSystem:
+            "系统"
+        case .monitoringTab:
+            "监听"
+        case .generalTab:
+            "通用"
+        case .toolsTab:
+            "工具"
         case .menuActivate:
             "启用 FlowSound"
         case .menuDeactivate:
@@ -305,14 +410,20 @@ enum FlowSoundStrings {
             "安静时长"
         case .quietDurationHelp:
             "安静多久后恢复播放。默认：3.0 秒"
+        case .recentAudioSources:
+            "最近检测到的发声源"
+        case .recentAudioSourcesEmpty:
+            "最近 3 分钟没有检测到发声源。请先在其他 App 播放声音，然后刷新这里。"
+        case .recentAudioSourcesHelp:
+            "显示最近向 Core Audio 报告输出的进程。需要时可把这些 Bundle Identifier 填入监听或忽略列表。"
+        case .refresh:
+            "刷新"
         case .resetDefaults:
             "恢复默认"
         case .restoring(let player):
             "正在恢复 \(player)"
         case .save:
             "保存"
-        case .showMenuBarText:
-            "在菜单栏显示 FlowSound 文字"
         case .status(let state):
             "状态：\(state)"
         case .startupClose:
@@ -329,6 +440,12 @@ enum FlowSoundStrings {
             "时间参数"
         case .timingHelp:
             "调整 FlowSound 的触发和恢复速度。"
+        case .toolsDiagnostics:
+            "诊断"
+        case .toolsDiagnosticsHelp:
+            "打开诊断窗口，或复制本地日志路径。"
+        case .watchedAndExcludedHelp:
+            "用于浏览器辅助进程、通知服务，以及 FlowSound 无法从普通 App 识别的特殊 Bundle Identifier。"
         case .watchedApps:
             "监听的 App"
         case .watchedAppsHelp:

@@ -97,6 +97,20 @@ import Testing
 }
 
 @MainActor
+@Test func settingsStorePersistsLanguagePreference() {
+    let suiteName = "FlowSoundSettingsTests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+
+    let store = FlowSoundSettingsStore(defaults: defaults)
+    var settings = store.settings
+    settings.languagePreference = .simplifiedChinese
+    store.settings = settings
+
+    #expect(store.settings.languagePreference == .simplifiedChinese)
+}
+
+@MainActor
 @Test func settingsStorePersistsMonitoringMode() {
     let suiteName = "FlowSoundSettingsTests.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suiteName)!

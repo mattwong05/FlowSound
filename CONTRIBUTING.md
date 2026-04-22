@@ -128,6 +128,8 @@ Before merging functional changes:
 - Manually test excluded bundle identifiers by adding a noisy app and confirming it is ignored in all-apps mode.
 - Manually test watched-app-only mode after changing the monitoring mode in Preferences.
 - Manually test a custom watched bundle identifier from Preferences, then reset defaults.
+- Play audio in a few apps and confirm Preferences > Tools lists recent audio sources with bundle identifiers and statuses.
+- Change the Preferences language selection and confirm the Preferences and menu titles rebuild in the selected language.
 - Save Preferences repeatedly while launch-at-login requires approval and confirm System Settings does not gain duplicate login items.
 - Interrupt a restore by starting watched audio again during fade-in, then confirm the selected music app eventually returns to the original pre-duck volume.
 - Confirm the selected music app does not resume when the user paused it manually.

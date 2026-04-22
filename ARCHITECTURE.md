@@ -96,6 +96,7 @@ Persists local configuration.
 Initial settings:
 
 - Selected music app.
+- Language preference.
 - Enabled flag.
 - Audio monitoring mode.
 - Excluded bundle identifiers for all-apps monitoring mode.
@@ -105,7 +106,7 @@ Initial settings:
 - Quiet duration.
 - Fade-out duration.
 - Fade-in duration.
-- Menu bar text visibility.
+- Recent audio source history for diagnostics and bundle identifier discovery.
 
 Settings are stored in `UserDefaults` through `FlowSoundSettingsStore`. Updates are applied to the menu bar presentation immediately and forwarded to `FlowSoundService`.
 
@@ -114,6 +115,8 @@ Audio monitoring mode is persisted in `UserDefaults`. The default mode monitors 
 Watched bundle identifiers are parsed from Preferences, validated, deduplicated, and persisted. If the saved whitelist is empty or invalid, FlowSound falls back to the default Safari and Telegram identifiers.
 
 Safari is expanded at runtime to include WebKit helper bundle identifiers because website audio, including YouTube playback, may be emitted by helper processes rather than the `com.apple.Safari` process itself.
+
+Preferences uses General, Monitoring, and Tools tabs. General owns language, music app, timing, and launch-at-login. Monitoring owns raw watched and excluded bundle identifier editors. Tools owns the diagnostics actions and a recent audio source panel that records Core Audio output processes seen in the last 3 minutes, including their current watched or excluded status.
 
 ### LoginItemController
 
@@ -206,6 +209,7 @@ flowchart LR
 - Use all-apps-except-selected-music-app monitoring by default to avoid per-app bundle identifier friction.
 - Use an excluded bundle identifier list to filter the selected music app, FlowSound, and common notification services from all-apps monitoring.
 - Use Core Audio process-output polling as a fallback activity source when a matching process is actively outputting audio.
+- Record recent Core Audio output processes for Preferences > Tools so users can discover real bundle identifiers without guessing.
 - Use AppleScript as a small adapter instead of ScriptingBridge-heavy integration.
 - Use Core Audio bundle-ID tap configuration on macOS 26 and newer. On macOS 15-25, use current Core Audio process object IDs because `CATapDescription.bundleIDs` and process restoration are macOS 26+ API.
 - Keep the first version local-only with no network service.

@@ -47,6 +47,7 @@ enum ControlledMusicPlayer: String, Sendable, Equatable, CaseIterable {
 }
 
 struct FlowSoundSettings: Sendable, Equatable {
+    var languagePreference: FlowSoundLanguagePreference
     var controlledMusicPlayer: ControlledMusicPlayer
     var monitoringMode: AudioMonitoringMode
     var watchedBundleIdentifiers: [String]
@@ -56,9 +57,9 @@ struct FlowSoundSettings: Sendable, Equatable {
     var quietDuration: TimeInterval
     var fadeOutDuration: TimeInterval
     var fadeInDuration: TimeInterval
-    var showsMenuBarText: Bool
 
     static let defaults = FlowSoundSettings(
+        languagePreference: .system,
         controlledMusicPlayer: .appleMusic,
         monitoringMode: .allNonMusic,
         watchedBundleIdentifiers: [
@@ -76,8 +77,7 @@ struct FlowSoundSettings: Sendable, Equatable {
         activeDuration: 1.0,
         quietDuration: 3.0,
         fadeOutDuration: 2.0,
-        fadeInDuration: 2.0,
-        showsMenuBarText: true
+        fadeInDuration: 2.0
     )
 
     static let safariAudioBundleIdentifiers = [
@@ -177,6 +177,7 @@ final class FlowSoundSettingsStore {
 
     private enum Key {
         static let settingsSchemaVersion = "settingsSchemaVersion"
+        static let languagePreference = FlowSoundLanguagePreference.defaultsKey
         static let controlledMusicPlayer = "controlledMusicPlayer"
         static let monitoringMode = "monitoringMode"
         static let watchedBundleIdentifiers = "watchedBundleIdentifiers"
@@ -186,7 +187,6 @@ final class FlowSoundSettingsStore {
         static let quietDuration = "quietDuration"
         static let fadeOutDuration = "fadeOutDuration"
         static let fadeInDuration = "fadeInDuration"
-        static let showsMenuBarText = "showsMenuBarText"
     }
 
     private enum Schema {
@@ -206,6 +206,7 @@ final class FlowSoundSettingsStore {
     var settings: FlowSoundSettings {
         get {
             FlowSoundSettings(
+                languagePreference: FlowSoundLanguagePreference(rawValue: defaults.string(forKey: Key.languagePreference) ?? "") ?? FlowSoundSettings.defaults.languagePreference,
                 controlledMusicPlayer: ControlledMusicPlayer(rawValue: defaults.string(forKey: Key.controlledMusicPlayer) ?? "") ?? FlowSoundSettings.defaults.controlledMusicPlayer,
                 monitoringMode: AudioMonitoringMode(rawValue: defaults.string(forKey: Key.monitoringMode) ?? "") ?? FlowSoundSettings.defaults.monitoringMode,
                 watchedBundleIdentifiers: FlowSoundSettings.validWatchedBundleIdentifiers(
@@ -218,14 +219,14 @@ final class FlowSoundSettingsStore {
                 activeDuration: defaults.double(forKey: Key.activeDuration),
                 quietDuration: defaults.double(forKey: Key.quietDuration),
                 fadeOutDuration: defaults.double(forKey: Key.fadeOutDuration),
-                fadeInDuration: defaults.double(forKey: Key.fadeInDuration),
-                showsMenuBarText: defaults.bool(forKey: Key.showsMenuBarText)
+                fadeInDuration: defaults.double(forKey: Key.fadeInDuration)
             )
         }
         set {
             var savedSettings = newValue
             savedSettings.watchedBundleIdentifiers = FlowSoundSettings.validWatchedBundleIdentifiers(newValue.watchedBundleIdentifiers)
             savedSettings.excludedBundleIdentifiers = FlowSoundSettings.validExcludedBundleIdentifiers(newValue.excludedBundleIdentifiers)
+            defaults.set(savedSettings.languagePreference.rawValue, forKey: Key.languagePreference)
             defaults.set(savedSettings.controlledMusicPlayer.rawValue, forKey: Key.controlledMusicPlayer)
             defaults.set(savedSettings.monitoringMode.rawValue, forKey: Key.monitoringMode)
             defaults.set(
@@ -241,7 +242,6 @@ final class FlowSoundSettingsStore {
             defaults.set(savedSettings.quietDuration, forKey: Key.quietDuration)
             defaults.set(savedSettings.fadeOutDuration, forKey: Key.fadeOutDuration)
             defaults.set(savedSettings.fadeInDuration, forKey: Key.fadeInDuration)
-            defaults.set(savedSettings.showsMenuBarText, forKey: Key.showsMenuBarText)
             onSettingsChanged?(savedSettings)
         }
     }
@@ -252,6 +252,7 @@ final class FlowSoundSettingsStore {
 
     private func registerDefaults() {
         defaults.register(defaults: [
+            Key.languagePreference: FlowSoundSettings.defaults.languagePreference.rawValue,
             Key.controlledMusicPlayer: FlowSoundSettings.defaults.controlledMusicPlayer.rawValue,
             Key.monitoringMode: FlowSoundSettings.defaults.monitoringMode.rawValue,
             Key.watchedBundleIdentifiers: FlowSoundSettings.defaults.watchedBundleIdentifiers,
@@ -260,8 +261,7 @@ final class FlowSoundSettingsStore {
             Key.activeDuration: FlowSoundSettings.defaults.activeDuration,
             Key.quietDuration: FlowSoundSettings.defaults.quietDuration,
             Key.fadeOutDuration: FlowSoundSettings.defaults.fadeOutDuration,
-            Key.fadeInDuration: FlowSoundSettings.defaults.fadeInDuration,
-            Key.showsMenuBarText: FlowSoundSettings.defaults.showsMenuBarText
+            Key.fadeInDuration: FlowSoundSettings.defaults.fadeInDuration
         ])
     }
 

@@ -14,6 +14,21 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.14.0] - 2026-04-22
+
+### Added
+
+- Added Preferences language selection with System, English, and Simplified Chinese options.
+- Added a tabbed Preferences layout with General, Monitoring, and Tools tabs.
+- Added a Tools panel for recently detected audio sources from the last 3 minutes, including bundle identifier, pid, and current watched/excluded status.
+- Added unit tests for language preference persistence and recent audio source retention.
+
+### Changed
+
+- Changed the menu bar item to icon-only and removed the user-facing menu bar text option.
+- Moved diagnostics actions from the menu bar menu into Preferences > Tools.
+- Kept watched and excluded app configuration as raw bundle identifier text editors, with Tools as the assisted discovery path.
+
 ## [0.13.1] - 2026-04-22
 
 ### Fixed

@@ -305,7 +305,13 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
         lastPollAt = now
 
         do {
-            let matches = try runningOutputProcesses()
+            let outputProcesses = try runningOutputProcesses()
+            recordRecentAudioSources(outputProcesses, now: now)
+            let watched = Set(expandedWatchedBundleIdentifiers)
+            let excluded = Set(excludedBundleIdentifiers)
+            let matches = outputProcesses.filter {
+                isWatchedProcess(bundleID: $0.bundleID, watched: watched, excluded: excluded)
+            }
             guard !matches.isEmpty else { return }
 
             if now - lastMatchedProcessLogAt >= 3.0 {
@@ -333,8 +339,6 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
     }
 
     private func runningOutputProcesses() throws -> [AudioProcessSnapshot] {
-        let watched = Set(expandedWatchedBundleIdentifiers)
-        let excluded = Set(excludedBundleIdentifiers)
         let processIDs = try readAudioObjectIDArray(
             objectID: AudioObjectID(kAudioObjectSystemObject),
             selector: kAudioHardwarePropertyProcessObjectList
@@ -343,7 +347,6 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
         var matches: [AudioProcessSnapshot] = []
         for processID in processIDs {
             guard let bundleID = try? readProcessBundleID(processID),
-                  isWatchedProcess(bundleID: bundleID, watched: watched, excluded: excluded),
                   (try? readProcessIsRunningOutput(processID)) == true
             else {
                 continue
@@ -353,6 +356,31 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
             matches.append(AudioProcessSnapshot(pid: pid, bundleID: bundleID))
         }
         return matches
+    }
+
+    private func recordRecentAudioSources(_ snapshots: [AudioProcessSnapshot], now: TimeInterval) {
+        let watched = Set(expandedWatchedBundleIdentifiers)
+        let excluded = Set(excludedBundleIdentifiers)
+        let selectedMusic = Set(settings.controlledMusicPlayer.bundleIdentifiers)
+
+        for snapshot in snapshots {
+            let status: RecentAudioSourceStatus
+            if selectedMusic.contains(snapshot.bundleID) {
+                status = .selectedMusicApp
+            } else if excluded.contains(snapshot.bundleID) {
+                status = .excluded
+            } else if isWatchedProcess(bundleID: snapshot.bundleID, watched: watched, excluded: excluded) {
+                status = .watched
+            } else {
+                status = .detected
+            }
+            RecentAudioSourceStore.shared.record(
+                bundleIdentifier: snapshot.bundleID,
+                pid: snapshot.pid,
+                status: status,
+                now: now
+            )
+        }
     }
 
     private func processObjectIDs(matching bundleIdentifiers: Set<String>) throws -> [AudioObjectID] {
