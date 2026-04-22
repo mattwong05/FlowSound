@@ -2,6 +2,16 @@ import AppKit
 
 @MainActor
 final class PreferencesWindowController {
+    private enum Layout {
+        static let width: CGFloat = 680
+        static let collapsedHeight: CGFloat = 620
+        static let expandedHeight: CGFloat = 780
+        static let minimumHeight: CGFloat = 520
+        static let horizontalInset: CGFloat = 24
+        static let verticalInset: CGFloat = 22
+        static let contentWidth: CGFloat = 620
+    }
+
     private let settingsStore: FlowSoundSettingsStore
     private var window: NSWindow?
     private var loadedLaunchAtLoginState: Bool?
@@ -16,7 +26,7 @@ final class PreferencesWindowController {
     private let showsMenuBarTextCheckbox = NSButton(checkboxWithTitle: FlowSoundStrings.text(.showMenuBarText), target: nil, action: nil)
     private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: FlowSoundStrings.text(.launchAtLogin), target: nil, action: nil)
     private let loginItemStatusLabel = NSTextField(labelWithString: "")
-    private let advancedDisclosure = NSButton(title: FlowSoundStrings.text(.advanced), target: nil, action: nil)
+    private let advancedDisclosure = NSButton(title: FlowSoundStrings.text(.advancedToggleShow), target: nil, action: nil)
     private let advancedContainer = NSStackView()
     private let watchedBundleIdentifiersTextView = NSTextView()
     private let excludedBundleIdentifiersTextView = NSTextView()
@@ -33,11 +43,23 @@ final class PreferencesWindowController {
             return
         }
 
+        let rootView = NSView()
+
+        let scrollView = NSScrollView()
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.hasVerticalScroller = true
+        scrollView.drawsBackground = false
+        scrollView.borderType = .noBorder
+
+        let documentView = NSView()
+        documentView.translatesAutoresizingMaskIntoConstraints = false
+
         let contentView = NSStackView()
+        contentView.translatesAutoresizingMaskIntoConstraints = false
         contentView.orientation = .vertical
         contentView.alignment = .leading
         contentView.spacing = 14
-        contentView.edgeInsets = NSEdgeInsets(top: 22, left: 24, bottom: 22, right: 24)
+        contentView.edgeInsets = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
 
         let title = NSTextField(labelWithString: FlowSoundStrings.text(.preferencesTitle))
         title.font = .systemFont(ofSize: 22, weight: .semibold)
@@ -72,16 +94,40 @@ final class PreferencesWindowController {
         )
         contentView.addArrangedSubview(makeOptionsSection())
         contentView.addArrangedSubview(makeAdvancedSection())
-        contentView.addArrangedSubview(makeButtonRow())
+
+        documentView.addSubview(contentView)
+        scrollView.documentView = documentView
+
+        let buttonRow = makeButtonRow()
+        buttonRow.translatesAutoresizingMaskIntoConstraints = false
+        rootView.addSubview(scrollView)
+        rootView.addSubview(buttonRow)
+
+        NSLayoutConstraint.activate([
+            scrollView.topAnchor.constraint(equalTo: rootView.topAnchor, constant: Layout.verticalInset),
+            scrollView.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: Layout.horizontalInset),
+            scrollView.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -Layout.horizontalInset),
+            buttonRow.topAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: 14),
+            buttonRow.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: Layout.horizontalInset),
+            buttonRow.trailingAnchor.constraint(lessThanOrEqualTo: rootView.trailingAnchor, constant: -Layout.horizontalInset),
+            buttonRow.bottomAnchor.constraint(equalTo: rootView.bottomAnchor, constant: -Layout.verticalInset),
+
+            contentView.topAnchor.constraint(equalTo: documentView.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: documentView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: documentView.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: documentView.bottomAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor)
+        ])
 
         let preferencesWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 680, height: 620),
+            contentRect: NSRect(x: 0, y: 0, width: Layout.width, height: preferredWindowHeight()),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
         preferencesWindow.title = FlowSoundStrings.text(.preferencesTitle)
-        preferencesWindow.contentView = contentView
+        preferencesWindow.contentView = rootView
+        preferencesWindow.minSize = NSSize(width: Layout.width, height: Layout.minimumHeight)
         preferencesWindow.center()
         preferencesWindow.isReleasedWhenClosed = false
         window = preferencesWindow
@@ -103,7 +149,7 @@ final class PreferencesWindowController {
 
         let helpView = NSTextField(wrappingLabelWithString: help)
         helpView.textColor = .secondaryLabelColor
-        helpView.widthAnchor.constraint(equalToConstant: 620).isActive = true
+        helpView.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
         section.addArrangedSubview(helpView)
 
         for row in rows {
@@ -157,17 +203,21 @@ final class PreferencesWindowController {
         section.alignment = .leading
         section.spacing = 8
 
+        let title = NSTextField(labelWithString: FlowSoundStrings.text(.advanced))
+        title.font = .systemFont(ofSize: 13, weight: .semibold)
+        section.addArrangedSubview(title)
+
+        let help = NSTextField(wrappingLabelWithString: FlowSoundStrings.text(.advancedHelp))
+        help.textColor = .secondaryLabelColor
+        help.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
+        section.addArrangedSubview(help)
+
         advancedDisclosure.setButtonType(.pushOnPushOff)
         advancedDisclosure.bezelStyle = .disclosure
         advancedDisclosure.state = .off
         advancedDisclosure.target = self
         advancedDisclosure.action = #selector(toggleAdvanced)
         section.addArrangedSubview(advancedDisclosure)
-
-        let help = NSTextField(wrappingLabelWithString: FlowSoundStrings.text(.advancedHelp))
-        help.textColor = .secondaryLabelColor
-        help.widthAnchor.constraint(equalToConstant: 620).isActive = true
-        section.addArrangedSubview(help)
 
         advancedContainer.orientation = .vertical
         advancedContainer.alignment = .leading
@@ -202,7 +252,7 @@ final class PreferencesWindowController {
 
         let helpView = NSTextField(wrappingLabelWithString: help)
         helpView.textColor = .secondaryLabelColor
-        helpView.widthAnchor.constraint(equalToConstant: 620).isActive = true
+        helpView.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
         section.addArrangedSubview(helpView)
 
         configureBundleIdentifierTextView(textView)
@@ -211,7 +261,7 @@ final class PreferencesWindowController {
         scrollView.borderType = .bezelBorder
         scrollView.hasVerticalScroller = true
         scrollView.documentView = textView
-        scrollView.widthAnchor.constraint(equalToConstant: 620).isActive = true
+        scrollView.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
         scrollView.heightAnchor.constraint(equalToConstant: height).isActive = true
         section.addArrangedSubview(scrollView)
         return section
@@ -362,8 +412,29 @@ final class PreferencesWindowController {
     }
 
     @objc private func toggleAdvanced() {
-        advancedContainer.isHidden = advancedDisclosure.state != .on
-        window?.layoutIfNeeded()
+        let isExpanded = advancedDisclosure.state == .on
+        advancedContainer.isHidden = !isExpanded
+        advancedDisclosure.title = FlowSoundStrings.text(isExpanded ? .advancedToggleHide : .advancedToggleShow)
+        resizeWindowForAdvancedState()
+        window?.contentView?.layoutSubtreeIfNeeded()
+    }
+
+    private func preferredWindowHeight() -> CGFloat {
+        let preferredHeight = advancedDisclosure.state == .on ? Layout.expandedHeight : Layout.collapsedHeight
+        let visibleHeight = NSScreen.main?.visibleFrame.height ?? preferredHeight
+        let cappedHeight = min(preferredHeight, visibleHeight - 80)
+        return max(Layout.minimumHeight, cappedHeight)
+    }
+
+    private func resizeWindowForAdvancedState() {
+        guard let window else { return }
+        let newContentHeight = preferredWindowHeight()
+        let contentRect = NSRect(x: 0, y: 0, width: Layout.width, height: newContentHeight)
+        let newFrameSize = window.frameRect(forContentRect: contentRect).size
+        var frame = window.frame
+        frame.origin.y += frame.height - newFrameSize.height
+        frame.size = newFrameSize
+        window.setFrame(frame, display: true, animate: true)
     }
 
     private func configureBundleIdentifierTextView(_ textView: NSTextView) {

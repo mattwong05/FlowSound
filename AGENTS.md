@@ -68,6 +68,7 @@ Final responses must end with proposed commit lines and the files included in ea
 
 ## FlowSound Engineering Rules
 
+- Keep `main` on the last stable public release. Put new features and release-candidate fixes on `dev` until they are ready for default downloads.
 - Prefer native Swift, SwiftUI, AppKit, and Core Audio.
 - Keep Core Audio process tap logic isolated from UI.
 - Keep watched app whitelist parsing and validation in settings code.

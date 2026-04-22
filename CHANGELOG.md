@@ -14,6 +14,17 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.13.1] - 2026-04-22
+
+### Fixed
+
+- Fixed Preferences Advanced expansion overflowing the screen and hiding the Save / Reset buttons.
+- Fixed Preferences not returning to a compact height after Advanced is collapsed.
+
+### Changed
+
+- Clarified that new feature work should happen on the `dev` branch while `main` stays on the last stable public release.
+
 ## [0.13.0] - 2026-04-22
 
 ### Added

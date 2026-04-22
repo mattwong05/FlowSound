@@ -46,6 +46,7 @@ Allowed commit types:
 
 ## Engineering Constraints
 
+- Keep `main` on the last stable public release. Put new features and release-candidate fixes on `dev` until they are ready for default downloads.
 - Keep Core Audio code isolated from UI.
 - Keep watched app whitelist parsing and validation in settings code, not Core Audio or UI code.
 - Keep monitoring mode behavior explicit in settings and docs.

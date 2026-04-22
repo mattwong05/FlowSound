@@ -28,6 +28,10 @@ shasum -a 256 -c SHA256SUMS.txt
 
 See [INSTALL.md](INSTALL.md) for installation, first-run permissions, unsigned build notes, and uninstall steps.
 
+## Branch Policy
+
+The `main` branch tracks the last stable public release. New features and release-candidate fixes are developed on `dev` first, then promoted to `main` only after they are ready for the default download path.
+
 ## Trust and Privacy
 
 FlowSound is open source and designed to be local-first:

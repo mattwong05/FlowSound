@@ -21,6 +21,8 @@ enum FlowSoundStrings {
         case activated
         case advanced
         case advancedHelp
+        case advancedToggleHide
+        case advancedToggleShow
         case allNonMusic
         case audioMonitoring
         case audioMonitoringHelp
@@ -102,6 +104,10 @@ enum FlowSoundStrings {
             "Advanced"
         case .advancedHelp:
             "Bundle identifier filters for special cases."
+        case .advancedToggleHide:
+            "Hide bundle filters"
+        case .advancedToggleShow:
+            "Show bundle filters"
         case .allNonMusic:
             "All apps except music"
         case .audioMonitoring:
@@ -225,6 +231,10 @@ enum FlowSoundStrings {
             "高级"
         case .advancedHelp:
             "特殊场景使用的 Bundle Identifier 过滤规则。"
+        case .advancedToggleHide:
+            "隐藏 Bundle 过滤器"
+        case .advancedToggleShow:
+            "显示 Bundle 过滤器"
         case .allNonMusic:
             "除音乐外的所有 App"
         case .audioMonitoring:

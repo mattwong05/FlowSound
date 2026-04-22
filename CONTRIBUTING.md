@@ -50,6 +50,8 @@ Launch-at-login uses `SMAppService` and should be validated with a signed, insta
 
 ## Release Process
 
+Use `main` for the last stable public release. New product features and release-candidate fixes should land on `dev` first. Merge or fast-forward `dev` into `main` only after the build is considered stable enough for the default download path.
+
 Release builds are created with `scripts/package-release.sh`.
 
 Default behavior:
