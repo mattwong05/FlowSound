@@ -14,6 +14,13 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.14.3] - 2026-04-22
+
+### Fixed
+
+- Fixed Preferences language switching leaving stale translated content layered in the window.
+- Fixed repeated Preferences rebuilds accumulating reused AppKit subviews and duplicate fixed-width constraints.
+
 ## [0.14.2] - 2026-04-22
 
 ### Fixed

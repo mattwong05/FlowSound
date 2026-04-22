@@ -57,6 +57,7 @@ final class PreferencesWindowController {
     private let contentContainer = NSView()
     private var contentHeightConstraint: NSLayoutConstraint?
     private var tabContentViews: [PreferencesTab: NSView] = [:]
+    private var fixedWidthViews: Set<ObjectIdentifier> = []
 
     private let languagePopup = NSPopUpButton()
     private let musicPlayerPopup = NSPopUpButton()
@@ -86,6 +87,7 @@ final class PreferencesWindowController {
             return
         }
 
+        resetReusableViewsForNewWindow()
         let rootView = NSView()
         configureTabControl()
 
@@ -321,7 +323,7 @@ final class PreferencesWindowController {
             languagePopup.addItem(withTitle: preference.label)
             languagePopup.lastItem?.representedObject = preference.rawValue
         }
-        languagePopup.widthAnchor.constraint(equalToConstant: 220).isActive = true
+        setFixedWidth(220, for: languagePopup)
         return controlRow(FlowSoundStrings.text(.language), languagePopup)
     }
 
@@ -331,7 +333,7 @@ final class PreferencesWindowController {
             musicPlayerPopup.addItem(withTitle: player.displayName)
             musicPlayerPopup.lastItem?.representedObject = player.rawValue
         }
-        musicPlayerPopup.widthAnchor.constraint(equalToConstant: 220).isActive = true
+        setFixedWidth(220, for: musicPlayerPopup)
         return controlRow(FlowSoundStrings.text(.musicPlayer), musicPlayerPopup)
     }
 
@@ -343,7 +345,7 @@ final class PreferencesWindowController {
         }
         monitoringModePopup.target = self
         monitoringModePopup.action = #selector(monitoringModeChanged)
-        monitoringModePopup.widthAnchor.constraint(equalToConstant: 220).isActive = true
+        setFixedWidth(220, for: monitoringModePopup)
         return controlRow(FlowSoundStrings.text(.audioMonitoring), monitoringModePopup)
     }
 
@@ -477,7 +479,7 @@ final class PreferencesWindowController {
         field.alignment = .right
         field.placeholderString = "0.0"
         field.toolTip = help
-        field.widthAnchor.constraint(equalToConstant: Layout.fieldWidth).isActive = true
+        setFixedWidth(Layout.fieldWidth, for: field)
 
         let helpView = NSTextField(labelWithString: help)
         helpView.textColor = .secondaryLabelColor
@@ -541,10 +543,32 @@ final class PreferencesWindowController {
     }
 
     private func rebuildWindow() {
-        window?.close()
+        let oldWindow = window
         window = nil
-        tabContentViews.removeAll()
+        oldWindow?.contentView = nil
+        oldWindow?.close()
+        resetReusableViewsForNewWindow()
         show()
+    }
+
+    private func resetReusableViewsForNewWindow() {
+        contentHeightConstraint?.isActive = false
+        contentHeightConstraint = nil
+        tabContentViews.removeAll()
+        contentContainer.subviews.forEach { $0.removeFromSuperview() }
+        contentContainer.removeFromSuperview()
+        tabControl.removeFromSuperview()
+        launchAtLoginCheckbox.title = FlowSoundStrings.text(.launchAtLogin)
+        recentSourcesDocumentView.subviews.forEach { $0.removeFromSuperview() }
+    }
+
+    private func setFixedWidth(_ width: CGFloat, for view: NSView) {
+        let identifier = ObjectIdentifier(view)
+        guard !fixedWidthViews.contains(identifier) else {
+            return
+        }
+        view.widthAnchor.constraint(equalToConstant: width).isActive = true
+        fixedWidthViews.insert(identifier)
     }
 
     private func selectLanguagePreference(_ preference: FlowSoundLanguagePreference) {
