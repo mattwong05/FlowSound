@@ -1,13 +1,19 @@
 import AppKit
 
+private final class FlippedDocumentView: NSView {
+    override var isFlipped: Bool { true }
+}
+
 @MainActor
 final class PreferencesWindowController {
     private enum Layout {
         static let width: CGFloat = 720
         static let defaultHeight: CGFloat = 640
         static let minimumHeight: CGFloat = 420
-        static let verticalChrome: CGFloat = 148
-        static let maxVisibleContentHeight: CGFloat = 640
+        static let verticalChrome: CGFloat = 132
+        static let generalContentHeight: CGFloat = 500
+        static let monitoringContentHeight: CGFloat = 620
+        static let toolsContentHeight: CGFloat = 470
         static let contentWidth: CGFloat = 640
         static let labelWidth: CGFloat = 140
         static let fieldWidth: CGFloat = 86
@@ -29,6 +35,17 @@ final class PreferencesWindowController {
                 FlowSoundStrings.text(.toolsTab)
             }
         }
+
+        var preferredContentHeight: CGFloat {
+            switch self {
+            case .general:
+                Layout.generalContentHeight
+            case .monitoring:
+                Layout.monitoringContentHeight
+            case .tools:
+                Layout.toolsContentHeight
+            }
+        }
     }
 
     private let settingsStore: FlowSoundSettingsStore
@@ -37,9 +54,8 @@ final class PreferencesWindowController {
     private var loadedLaunchAtLoginState: Bool?
     private var selectedTab: PreferencesTab = .general
     private let tabControl = NSSegmentedControl()
-    private let contentScrollView = NSScrollView()
+    private let contentContainer = NSView()
     private var contentHeightConstraint: NSLayoutConstraint?
-    private var currentContentView: NSView?
     private var tabContentViews: [PreferencesTab: NSView] = [:]
 
     private let languagePopup = NSPopUpButton()
@@ -55,6 +71,7 @@ final class PreferencesWindowController {
     private let watchedBundleIdentifiersTextView = NSTextView()
     private let excludedBundleIdentifiersTextView = NSTextView()
     private let recentSourcesStack = NSStackView()
+    private let recentSourcesDocumentView = FlippedDocumentView()
 
     init(settingsStore: FlowSoundSettingsStore) {
         self.settingsStore = settingsStore
@@ -71,25 +88,26 @@ final class PreferencesWindowController {
 
         let rootView = NSView()
         configureTabControl()
-        configureContentScrollView()
 
         let buttonRow = makeButtonRow()
         tabControl.translatesAutoresizingMaskIntoConstraints = false
-        contentScrollView.translatesAutoresizingMaskIntoConstraints = false
+        contentContainer.translatesAutoresizingMaskIntoConstraints = false
         buttonRow.translatesAutoresizingMaskIntoConstraints = false
         rootView.addSubview(tabControl)
-        rootView.addSubview(contentScrollView)
+        rootView.addSubview(contentContainer)
         rootView.addSubview(buttonRow)
+        contentHeightConstraint = contentContainer.heightAnchor.constraint(equalToConstant: selectedTab.preferredContentHeight)
+        contentHeightConstraint?.isActive = true
 
         NSLayoutConstraint.activate([
             tabControl.topAnchor.constraint(equalTo: rootView.topAnchor, constant: 18),
             tabControl.centerXAnchor.constraint(equalTo: rootView.centerXAnchor),
 
-            contentScrollView.topAnchor.constraint(equalTo: tabControl.bottomAnchor, constant: 16),
-            contentScrollView.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 20),
-            contentScrollView.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -20),
+            contentContainer.topAnchor.constraint(equalTo: tabControl.bottomAnchor, constant: 16),
+            contentContainer.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 20),
+            contentContainer.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -20),
 
-            buttonRow.topAnchor.constraint(equalTo: contentScrollView.bottomAnchor, constant: 14),
+            buttonRow.topAnchor.constraint(equalTo: contentContainer.bottomAnchor, constant: 14),
             buttonRow.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 20),
             buttonRow.trailingAnchor.constraint(lessThanOrEqualTo: rootView.trailingAnchor, constant: -20),
             buttonRow.bottomAnchor.constraint(equalTo: rootView.bottomAnchor, constant: -18)
@@ -130,14 +148,6 @@ final class PreferencesWindowController {
         tabControl.selectedSegment = selectedTab.rawValue
     }
 
-    private func configureContentScrollView() {
-        contentScrollView.hasVerticalScroller = true
-        contentScrollView.drawsBackground = false
-        contentScrollView.borderType = .noBorder
-        contentHeightConstraint = contentScrollView.heightAnchor.constraint(equalToConstant: 1)
-        contentHeightConstraint?.isActive = true
-    }
-
     @objc private func tabChanged() {
         guard let tab = PreferencesTab(rawValue: tabControl.selectedSegment) else {
             return
@@ -148,9 +158,9 @@ final class PreferencesWindowController {
     }
 
     private func showSelectedTab(adjustWindow: Bool) {
-        let content = contentView(for: selectedTab)
-        currentContentView = content
-        contentScrollView.documentView = makeScrollableDocument(for: content)
+        for (tab, view) in tabContentViews {
+            view.isHidden = tab != selectedTab
+        }
 
         if adjustWindow {
             adjustWindowHeightForSelectedTab()
@@ -165,41 +175,53 @@ final class PreferencesWindowController {
         let view: NSView
         switch tab {
         case .general:
-            view = makeGeneralTab()
+            view = makeTabScrollView(makeGeneralTab(), height: tab.preferredContentHeight)
         case .monitoring:
-            view = makeMonitoringTab()
+            view = makeTabScrollView(makeMonitoringTab(), height: tab.preferredContentHeight)
         case .tools:
-            view = makeToolsTab()
+            view = makeTabScrollView(makeToolsTab(), height: tab.preferredContentHeight)
         }
+        view.translatesAutoresizingMaskIntoConstraints = false
+        contentContainer.addSubview(view)
+        NSLayoutConstraint.activate([
+            view.topAnchor.constraint(equalTo: contentContainer.topAnchor),
+            view.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+            view.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+            view.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor)
+        ])
+        view.isHidden = tab != selectedTab
         tabContentViews[tab] = view
         return view
     }
 
-    private func makeScrollableDocument(for content: NSView) -> NSView {
-        let documentView = NSView()
-        documentView.translatesAutoresizingMaskIntoConstraints = false
+    private func makeTabScrollView(_ content: NSView, height: CGFloat) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.hasVerticalScroller = true
+        scrollView.drawsBackground = false
+        scrollView.borderType = .noBorder
+
+        let documentView = FlippedDocumentView(frame: NSRect(x: 0, y: 0, width: Layout.contentWidth, height: height))
         content.translatesAutoresizingMaskIntoConstraints = false
         documentView.addSubview(content)
+        scrollView.documentView = documentView
 
         NSLayoutConstraint.activate([
             content.topAnchor.constraint(equalTo: documentView.topAnchor, constant: 2),
             content.leadingAnchor.constraint(equalTo: documentView.leadingAnchor),
             content.trailingAnchor.constraint(equalTo: documentView.trailingAnchor),
             content.bottomAnchor.constraint(equalTo: documentView.bottomAnchor, constant: -2),
-            content.widthAnchor.constraint(equalTo: contentScrollView.contentView.widthAnchor)
+            content.widthAnchor.constraint(equalToConstant: Layout.contentWidth)
         ])
 
-        return documentView
+        return scrollView
     }
 
     private func adjustWindowHeightForSelectedTab() {
-        guard let window, let currentContentView else {
+        guard let window else {
             return
         }
 
-        currentContentView.layoutSubtreeIfNeeded()
-        let fittingHeight = currentContentView.fittingSize.height + 8
-        let visibleContentHeight = min(Layout.maxVisibleContentHeight, max(260, fittingHeight))
+        let visibleContentHeight = selectedTab.preferredContentHeight
         contentHeightConstraint?.constant = visibleContentHeight
 
         let targetContentHeight = Layout.verticalChrome + visibleContentHeight
@@ -396,26 +418,20 @@ final class PreferencesWindowController {
         recentSourcesStack.orientation = .vertical
         recentSourcesStack.alignment = .leading
         recentSourcesStack.spacing = 8
-        recentSourcesStack.translatesAutoresizingMaskIntoConstraints = false
+        recentSourcesStack.translatesAutoresizingMaskIntoConstraints = true
+        recentSourcesStack.autoresizingMask = [.width]
+        recentSourcesStack.frame = NSRect(x: 10, y: 10, width: Layout.contentWidth - 20, height: 230)
 
-        let documentView = NSView()
-        documentView.translatesAutoresizingMaskIntoConstraints = false
-        documentView.addSubview(recentSourcesStack)
+        recentSourcesDocumentView.subviews.forEach { $0.removeFromSuperview() }
+        recentSourcesDocumentView.frame = NSRect(x: 0, y: 0, width: Layout.contentWidth, height: 250)
+        recentSourcesDocumentView.addSubview(recentSourcesStack)
 
         let scrollView = NSScrollView()
         scrollView.borderType = .bezelBorder
         scrollView.hasVerticalScroller = true
-        scrollView.documentView = documentView
+        scrollView.documentView = recentSourcesDocumentView
         scrollView.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
         scrollView.heightAnchor.constraint(equalToConstant: 250).isActive = true
-
-        NSLayoutConstraint.activate([
-            recentSourcesStack.topAnchor.constraint(equalTo: documentView.topAnchor, constant: 10),
-            recentSourcesStack.leadingAnchor.constraint(equalTo: documentView.leadingAnchor, constant: 10),
-            recentSourcesStack.trailingAnchor.constraint(equalTo: documentView.trailingAnchor, constant: -10),
-            recentSourcesStack.bottomAnchor.constraint(lessThanOrEqualTo: documentView.bottomAnchor, constant: -10),
-            recentSourcesStack.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor, constant: -20)
-        ])
 
         return scrollView
     }
@@ -599,12 +615,20 @@ final class PreferencesWindowController {
             empty.textColor = .secondaryLabelColor
             empty.widthAnchor.constraint(equalToConstant: Layout.contentWidth - 18).isActive = true
             recentSourcesStack.addArrangedSubview(empty)
+            updateRecentSourcesDocumentHeight(rowCount: 1)
             return
         }
 
         for source in sources {
             recentSourcesStack.addArrangedSubview(makeRecentSourceRow(source))
         }
+        updateRecentSourcesDocumentHeight(rowCount: sources.count)
+    }
+
+    private func updateRecentSourcesDocumentHeight(rowCount: Int) {
+        let height = max(CGFloat(rowCount) * 54 + 20, 250)
+        recentSourcesDocumentView.setFrameSize(NSSize(width: Layout.contentWidth, height: height))
+        recentSourcesStack.frame = NSRect(x: 10, y: 10, width: Layout.contentWidth - 20, height: height - 20)
     }
 
     private func makeRecentSourceRow(_ source: RecentAudioSource) -> NSStackView {

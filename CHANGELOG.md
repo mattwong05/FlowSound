@@ -14,6 +14,14 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.14.2] - 2026-04-22
+
+### Fixed
+
+- Fixed Preferences opening with severe layout lag, missing content, and unresponsive tab/save controls.
+- Replaced recursive Preferences height fitting with stable per-tab height targets.
+- Fixed recent audio source rendering by using explicit scroll document sizing instead of fragile nested scroll constraints.
+
 ## [0.14.1] - 2026-04-22
 
 ### Fixed
