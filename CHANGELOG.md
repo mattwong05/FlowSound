@@ -29,7 +29,10 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 - Migrated the existing AppleScript music control path to `AppleScriptMusicControlAdapter` while preserving current Apple Music and Spotify behavior.
 - Changed the Preferences music app picker to show experimental support levels instead of presenting all adapters as official support.
+- Changed Netease Cloud Music restore to use a more conservative relative-step count to avoid increasing volume after each duck/restore cycle.
+- Changed Netease adapter profile export to write a local JSON file under Application Support and reveal it in Finder instead of using a save panel.
 - Updated architecture and contributor documentation to keep future community adapters separate from official native support.
+- Updated app and documentation copy to explain Netease Accessibility permission, approximate volume restore, and local-only adapter profiles.
 
 ## [0.14.4] - 2026-04-22
 

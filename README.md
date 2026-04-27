@@ -46,6 +46,8 @@ FlowSound detects whether other apps are producing audio, then controls the sele
 
 Apple Music and Spotify are official supported music apps. Netease Cloud Music is experimental: it uses menu-state playback detection, relative volume steps, Accessibility permission, and Core Audio output feedback to confirm fade-out silence.
 
+Netease Cloud Music requires Accessibility permission because FlowSound must click the app's Controls menu through local macOS UI scripting. Its volume restore is approximate: Netease exposes relative volume menu steps, usually about 5%, and does not expose an exact readable volume through AppleScript.
+
 ## Current Implementation
 
 The current build is a native Swift menu bar app with:
@@ -55,7 +57,7 @@ The current build is a native Swift menu bar app with:
 - Apple Music and Spotify control through AppleScript and `osascript`.
 - A `MusicControlAdapter` capability model that separates official absolute-volume players from future experimental or community relative-step adapters.
 - Experimental Netease Cloud Music support through menu commands and relative-step fade control.
-- Adapter profile import/export for transparent community adapter metadata.
+- Adapter profile import/export for transparent community adapter metadata. Profiles are local JSON descriptions and do not trigger network requests or arbitrary script downloads.
 - Fade-out, pause, play, and fade-in behavior.
 - Playback-state check so FlowSound only restores music that it paused itself.
 - Core Audio process tap monitoring for all non-selected-music-app audio by default.

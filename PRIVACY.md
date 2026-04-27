@@ -25,7 +25,7 @@ FlowSound requests system audio capture permission to detect app audio activity.
 
 FlowSound requests Automation permission to control Apple Music or Spotify. It sends local commands such as `play`, `pause`, and `set sound volume`.
 
-Experimental adapters such as Netease Cloud Music may also require Accessibility permission because they use menu commands instead of a native AppleScript playback and volume interface. FlowSound keeps adapter profile data local and does not download or execute arbitrary community scripts.
+Experimental adapters such as Netease Cloud Music may also require Accessibility permission because they use menu commands instead of a native AppleScript playback and volume interface. FlowSound keeps adapter profile data local and does not download or execute arbitrary community scripts. Adapter import/export uses local JSON files only and does not make network requests.
 
 Launch at Login is optional and controlled from Preferences.
 

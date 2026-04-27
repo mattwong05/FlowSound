@@ -32,7 +32,7 @@ Recommended first detector:
 
 ### Controlling Music Apps
 
-Apple Music and Spotify can be controlled through Apple Events exposed to AppleScript. Netease Cloud Music is experimental because it does not expose the same native playback and volume interface; FlowSound controls it through menu-state detection, relative volume menu commands, and Core Audio output feedback. FlowSound should not put core product logic in AppleScript. Instead, Swift should own the state machine and call a small automation adapter for:
+Apple Music and Spotify can be controlled through Apple Events exposed to AppleScript. Netease Cloud Music is experimental because it does not expose the same native playback and volume interface; FlowSound controls it through menu-state detection, relative volume menu commands, and Core Audio output feedback. This requires Accessibility permission and can only restore to an approximate volume because Netease exposes relative menu steps, usually about 5%, not an exact readable volume. FlowSound should not put core product logic in AppleScript. Instead, Swift should own the state machine and call a small automation adapter for:
 
 - `play`
 - `pause`

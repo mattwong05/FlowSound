@@ -70,9 +70,9 @@ Responsibilities:
 
 `AbsoluteVolumeMusicControlAdapter` is the stable path used by Apple Music and Spotify. It exposes native playback-state reads plus `0...100` volume reads and writes. Future experimental or community adapters can declare other capabilities, such as menu-derived playback state or relative-step volume control, without pretending that every player exposes a reliable absolute volume.
 
-Netease Cloud Music is wired as an experimental adapter. It reads playback state from the Controls menu (`Pause` means playing, `Play` means paused), fades out with relative volume-down menu commands until the app's Core Audio output probe reports sustained silence, pauses through the menu, and restores with one fewer relative volume-up step by default to avoid overshooting the user's previous loudness.
+Netease Cloud Music is wired as an experimental adapter. It reads playback state from the Controls menu (`Pause` means playing, `Play` means paused), fades out with relative volume-down menu commands until the app's Core Audio output probe reports sustained silence, pauses through the menu, and restores conservatively with fewer relative volume-up steps to avoid overshooting the user's previous loudness. The restore is approximate because Netease exposes relative menu steps, usually about 5%, rather than an exact readable volume.
 
-Adapter profiles are JSON metadata that describe support level, bundle identifiers, capabilities, permissions, and notes. FlowSound can import and export profiles for review and sharing, but imported profiles are not executed as arbitrary scripts.
+Adapter profiles are local JSON metadata that describe support level, bundle identifiers, capabilities, permissions, and notes. FlowSound can import and export profiles for review and sharing, but imported profiles are not executed as arbitrary scripts, do not download scripts, and do not require network access.
 
 ### DuckingStateMachine
 

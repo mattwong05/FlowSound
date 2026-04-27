@@ -251,6 +251,11 @@ final class PreferencesWindowController {
             ]
         ))
         content.addArrangedSubview(makeSection(
+            title: FlowSoundStrings.text(.experimentalAdapters),
+            help: "\(FlowSoundStrings.text(.neteaseAccessHelp))\n\(FlowSoundStrings.text(.neteaseVolumeHelp))",
+            rows: [makeAccessibilitySettingsRow()]
+        ))
+        content.addArrangedSubview(makeSection(
             title: FlowSoundStrings.text(.timing),
             help: FlowSoundStrings.text(.timingHelp),
             rows: [
@@ -467,6 +472,14 @@ final class PreferencesWindowController {
         return row
     }
 
+    private func makeAccessibilitySettingsRow() -> NSStackView {
+        let row = NSStackView()
+        row.orientation = .horizontal
+        row.spacing = 10
+        row.addArrangedSubview(NSButton(title: FlowSoundStrings.text(.openAccessibilitySettings), target: self, action: #selector(openAccessibilitySettings)))
+        return row
+    }
+
     private func makeAdapterProfilesList() -> NSStackView {
         adapterProfilesStack.orientation = .vertical
         adapterProfilesStack.alignment = .leading
@@ -561,8 +574,8 @@ final class PreferencesWindowController {
             rebuildWindow()
         } else {
             populateFields()
-        refreshRecentAudioSources()
-        refreshAdapterProfiles()
+            refreshRecentAudioSources()
+            refreshAdapterProfiles()
         }
     }
 
@@ -842,16 +855,21 @@ final class PreferencesWindowController {
         guard let profile = MusicAdapterProfileStore.bundledProfiles.first(where: { $0.id == "community.netease-cloud-music.menu-tap" }) else {
             return
         }
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.json]
-        panel.nameFieldStringValue = "netease-cloud-music.flowsound-adapter.json"
-        guard panel.runModal() == .OK, let url = panel.url else {
-            return
-        }
         do {
+            let directory = try Self.adapterProfileExportDirectory()
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let url = directory.appendingPathComponent("netease-cloud-music.flowsound-adapter.json")
             try MusicAdapterProfileStore.shared.exportProfile(profile, to: url)
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+            showAlert(message: FlowSoundStrings.text(.exportAdapterProfileCompleted(url.path)))
         } catch {
             showAlert(message: error.localizedDescription)
+        }
+    }
+
+    @objc private func openAccessibilitySettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
         }
     }
 
@@ -861,6 +879,17 @@ final class PreferencesWindowController {
         alert.informativeText = message
         alert.alertStyle = .warning
         alert.runModal()
+    }
+
+    private static func adapterProfileExportDirectory() throws -> URL {
+        try FileManager.default.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        .appendingPathComponent("FlowSound", isDirectory: true)
+        .appendingPathComponent("AdapterProfiles", isDirectory: true)
     }
 
     @objc private func copyDiagnosticsPath() {

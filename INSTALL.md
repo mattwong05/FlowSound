@@ -11,6 +11,8 @@ FlowSound is a native macOS menu bar app for Apple Music and Spotify, with exper
 
 FlowSound officially controls Apple Music and Spotify through local AppleScript. Netease Cloud Music is experimental and uses menu commands, Accessibility permission, and Core Audio output feedback because it does not expose the same native playback and volume AppleScript interface.
 
+For Netease Cloud Music, open System Settings > Privacy & Security > Accessibility and allow FlowSound. This is needed so FlowSound can click Netease's Controls menu in the background. Volume restore is approximate because Netease exposes relative volume steps, usually about 5%, not an exact readable volume.
+
 ## Recommended Install
 
 1. Open the latest GitHub Release.

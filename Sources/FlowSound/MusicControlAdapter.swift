@@ -315,13 +315,17 @@ struct NeteaseCloudMusicControlAdapter: MusicControlAdapter {
         }
 
         try await play()
-        let restoreSteps = steps <= 2 ? steps : steps - 1
+        let restoreSteps = Self.restoreStepCount(forFadeOutSteps: steps)
         let stepDelay = max(0.12, settings.fadeInDuration / Double(max(restoreSteps, 1)))
         for _ in 0..<restoreSteps {
             try Task.checkCancellation()
             try await clickControlMenuItem(MenuItem.increaseVolume)
             try await Task.sleep(for: .seconds(stepDelay))
         }
+    }
+
+    static func restoreStepCount(forFadeOutSteps steps: Int) -> Int {
+        steps <= 2 ? steps : max(0, steps - 2)
     }
 
     func play() async throws {

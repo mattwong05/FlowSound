@@ -68,7 +68,12 @@ enum FlowSoundStrings {
         case adapterProfiles
         case adapterProfilesHelp
         case exportBundledAdapterProfile
+        case exportAdapterProfileCompleted(String)
+        case experimentalAdapters
         case importAdapterProfile
+        case neteaseAccessHelp
+        case neteaseVolumeHelp
+        case openAccessibilitySettings
         case audioMonitoring
         case audioMonitoringHelp
         case automationUnavailable(String)
@@ -181,8 +186,18 @@ enum FlowSoundStrings {
             "Import or export transparent adapter profiles. Imported profiles are metadata only; FlowSound does not run arbitrary downloaded scripts."
         case .exportBundledAdapterProfile:
             "Export Netease Profile"
+        case .exportAdapterProfileCompleted(let path):
+            "Exported adapter profile:\n\(path)"
+        case .experimentalAdapters:
+            "Experimental adapters"
         case .importAdapterProfile:
             "Import Profile..."
+        case .neteaseAccessHelp:
+            "Netease Cloud Music needs Accessibility permission because FlowSound controls its Controls menu. Open System Settings > Privacy & Security > Accessibility and allow FlowSound."
+        case .neteaseVolumeHelp:
+            "Netease volume restore is approximate. The app exposes relative menu steps, usually about 5%, not an exact readable volume."
+        case .openAccessibilitySettings:
+            "Open Accessibility Settings"
         case .audioMonitoring:
             "Audio monitoring"
         case .audioMonitoringHelp:
@@ -348,8 +363,18 @@ enum FlowSoundStrings {
             "导入或导出透明的适配器配置。导入的配置目前只作为元数据保存；FlowSound 不会执行任意下载脚本。"
         case .exportBundledAdapterProfile:
             "导出网易云配置"
+        case .exportAdapterProfileCompleted(let path):
+            "已导出适配器配置：\n\(path)"
+        case .experimentalAdapters:
+            "实验适配器"
         case .importAdapterProfile:
             "导入配置..."
+        case .neteaseAccessHelp:
+            "网易云音乐需要无障碍权限，因为 FlowSound 需要点击它的“控制”菜单。请在“系统设置 > 隐私与安全性 > 辅助功能”中允许 FlowSound。"
+        case .neteaseVolumeHelp:
+            "网易云音量恢复只能近似。它只暴露相对菜单步进，通常约 5%，不是可读取的精确音量。"
+        case .openAccessibilitySettings:
+            "打开无障碍设置"
         case .audioMonitoring:
             "音频监听"
         case .audioMonitoringHelp:

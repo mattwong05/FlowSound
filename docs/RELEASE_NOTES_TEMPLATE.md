@@ -45,5 +45,7 @@ See `INSTALL.md` for details.
 ## Known Limitations
 
 - Apple Music and Spotify are official support paths. Netease Cloud Music is experimental and can break if its menu layout changes.
+- Netease Cloud Music requires Accessibility permission so FlowSound can click its Controls menu. Its volume restore is approximate because Netease exposes relative volume steps instead of an exact readable volume.
+- Adapter profile import/export is local JSON metadata only. FlowSound does not download scripts or make network requests for profiles.
 - Unsigned builds are ad-hoc signed for bundle integrity but may still require manual Gatekeeper approval.
 - Launch at Login should be validated with signed and installed builds.

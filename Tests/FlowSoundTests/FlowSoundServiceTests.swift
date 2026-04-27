@@ -26,6 +26,12 @@ import Testing
     #expect(adapter.descriptor.bundleIdentifiers == ["com.netease.163music"])
 }
 
+@Test func neteaseRestoreUsesConservativeRelativeStepCount() {
+    #expect(NeteaseCloudMusicControlAdapter.restoreStepCount(forFadeOutSteps: 1) == 1)
+    #expect(NeteaseCloudMusicControlAdapter.restoreStepCount(forFadeOutSteps: 2) == 2)
+    #expect(NeteaseCloudMusicControlAdapter.restoreStepCount(forFadeOutSteps: 12) == 10)
+}
+
 @Test @MainActor func restoreVolumeIsPreservedWhenRestoreIsInterruptedByNewAudio() async throws {
     var settings = FlowSoundSettings.defaults
     settings.quietDuration = 0.05
