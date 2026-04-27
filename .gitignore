@@ -10,3 +10,6 @@ dist/
 # Xcode
 DerivedData/
 *.xcuserdata/
+
+# Screenshots
+screenshots/
