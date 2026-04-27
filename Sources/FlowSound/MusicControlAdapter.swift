@@ -357,27 +357,30 @@ struct NeteaseCloudMusicControlAdapter: MusicControlAdapter {
     }
 
     private func runAppleScript(_ source: String) async throws -> String {
-        try await Task.detached(priority: .utility) {
-            let process = Process()
-            let stdout = Pipe()
-            let stderr = Pipe()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            process.arguments = ["-e", source]
-            process.standardOutput = stdout
-            process.standardError = stderr
-
-            try process.run()
-            process.waitUntilExit()
-
-            let output = String(data: stdout.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let error = String(data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            guard process.terminationStatus == 0 else {
+        try await MainActor.run {
+            var error: NSDictionary?
+            guard let script = NSAppleScript(source: source) else {
                 throw MusicControlAdapterError.commandFailed(
                     playerName: playerName,
-                    message: error.trimmingCharacters(in: .whitespacesAndNewlines)
+                    message: "Could not create AppleScript command."
                 )
             }
-            return output.trimmingCharacters(in: .whitespacesAndNewlines)
-        }.value
+            let output = script.executeAndReturnError(&error)
+            if let error {
+                let message = (error[NSAppleScript.errorMessage] as? String) ?? error.description
+                throw MusicControlAdapterError.commandFailed(
+                    playerName: playerName,
+                    message: Self.accessibilityHintIfNeeded(message)
+                )
+            }
+            return (output.stringValue ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+    }
+
+    private static func accessibilityHintIfNeeded(_ message: String) -> String {
+        guard message.contains("-1719") || message.localizedCaseInsensitiveContains("assistive access") else {
+            return message
+        }
+        return "\(message) FlowSound needs Accessibility permission to control the Netease Controls menu. If FlowSound is already enabled there, remove it and add the current app build again."
     }
 }

@@ -48,6 +48,8 @@ Apple Music and Spotify are official supported music apps. Netease Cloud Music i
 
 Netease Cloud Music requires Accessibility permission because FlowSound must click the app's Controls menu through local macOS UI scripting. Its volume restore is approximate: Netease exposes relative volume menu steps, usually about 5%, and does not expose an exact readable volume through AppleScript.
 
+If Netease control still reports `osascript is not allowed assistive access` or `-1719` after enabling Accessibility, remove FlowSound from the Accessibility list and add the current rebuilt app again. macOS can treat a rebuilt ad-hoc signed app as a different automation client.
+
 ## Current Implementation
 
 The current build is a native Swift menu bar app with:

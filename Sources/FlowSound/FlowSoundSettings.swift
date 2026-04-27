@@ -26,7 +26,7 @@ enum ControlledMusicPlayer: String, Sendable, Equatable, CaseIterable {
         case .spotify:
             "Spotify"
         case .neteaseCloudMusic:
-            "Netease Cloud Music (Experimental)"
+            "Netease Cloud Music"
         }
     }
 

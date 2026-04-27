@@ -12,9 +12,9 @@ final class PreferencesWindowController {
         static let defaultHeight: CGFloat = 640
         static let minimumHeight: CGFloat = 420
         static let verticalChrome: CGFloat = 132
-        static let generalContentHeight: CGFloat = 500
+        static let generalContentHeight: CGFloat = 760
         static let monitoringContentHeight: CGFloat = 620
-        static let toolsContentHeight: CGFloat = 600
+        static let toolsContentHeight: CGFloat = 700
         static let contentWidth: CGFloat = 640
         static let labelWidth: CGFloat = 140
         static let fieldWidth: CGFloat = 86
@@ -213,7 +213,7 @@ final class PreferencesWindowController {
             content.topAnchor.constraint(equalTo: documentView.topAnchor, constant: 2),
             content.leadingAnchor.constraint(equalTo: documentView.leadingAnchor),
             content.trailingAnchor.constraint(equalTo: documentView.trailingAnchor),
-            content.bottomAnchor.constraint(equalTo: documentView.bottomAnchor, constant: -2),
+            content.bottomAnchor.constraint(lessThanOrEqualTo: documentView.bottomAnchor, constant: -2),
             content.widthAnchor.constraint(equalToConstant: Layout.contentWidth)
         ])
 

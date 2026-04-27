@@ -13,6 +13,8 @@ FlowSound officially controls Apple Music and Spotify through local AppleScript.
 
 For Netease Cloud Music, open System Settings > Privacy & Security > Accessibility and allow FlowSound. This is needed so FlowSound can click Netease's Controls menu in the background. Volume restore is approximate because Netease exposes relative volume steps, usually about 5%, not an exact readable volume.
 
+If Accessibility is already enabled but Netease still fails with `-1719` or an assistive access error, remove FlowSound from the Accessibility list and add the current rebuilt app again. This can happen with local ad-hoc signed builds.
+
 ## Recommended Install
 
 1. Open the latest GitHub Release.

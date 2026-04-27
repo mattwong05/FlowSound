@@ -21,6 +21,7 @@ import Testing
     let adapter = NeteaseCloudMusicControlAdapter()
 
     #expect(adapter.descriptor.supportLevel == .experimental)
+    #expect(adapter.descriptor.displayName == "Netease Cloud Music")
     #expect(adapter.descriptor.capabilities.playbackState == .menuState)
     #expect(adapter.descriptor.capabilities.volumeControl == .relativeStep)
     #expect(adapter.descriptor.bundleIdentifiers == ["com.netease.163music"])
