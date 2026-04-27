@@ -33,6 +33,7 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 - Changed Netease adapter profile export to write a local JSON file under Application Support and reveal it in Finder instead of using a save panel.
 - Changed Netease menu automation to run inside FlowSound instead of `/usr/bin/osascript`, so Accessibility permission belongs to FlowSound.
 - Tightened Preferences tab layout so fixed-height scroll areas no longer stretch section spacing.
+- Tightened Preferences content heights again and removed the duplicated launch-at-login status text.
 - Updated architecture and contributor documentation to keep future community adapters separate from official native support.
 - Updated app and documentation copy to explain Netease Accessibility permission, approximate volume restore, and local-only adapter profiles.
 

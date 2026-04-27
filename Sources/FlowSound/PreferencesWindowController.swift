@@ -12,9 +12,9 @@ final class PreferencesWindowController {
         static let defaultHeight: CGFloat = 640
         static let minimumHeight: CGFloat = 420
         static let verticalChrome: CGFloat = 132
-        static let generalContentHeight: CGFloat = 760
-        static let monitoringContentHeight: CGFloat = 620
-        static let toolsContentHeight: CGFloat = 700
+        static let generalContentHeight: CGFloat = 620
+        static let monitoringContentHeight: CGFloat = 560
+        static let toolsContentHeight: CGFloat = 640
         static let contentWidth: CGFloat = 640
         static let labelWidth: CGFloat = 140
         static let fieldWidth: CGFloat = 86
@@ -366,9 +366,18 @@ final class PreferencesWindowController {
     }
 
     private func makeLaunchSection() -> NSStackView {
-        let section = makeSection(title: FlowSoundStrings.text(.launchAtLogin), help: LoginItemController.statusText, rows: [])
+        let section = NSStackView()
+        section.orientation = .vertical
+        section.alignment = .leading
+        section.spacing = 8
+
+        let titleView = NSTextField(labelWithString: FlowSoundStrings.text(.launchAtLogin))
+        titleView.font = .systemFont(ofSize: 13, weight: .semibold)
+        section.addArrangedSubview(titleView)
+
         launchAtLoginCheckbox.target = self
         loginItemStatusLabel.textColor = .secondaryLabelColor
+        loginItemStatusLabel.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
         section.addArrangedSubview(launchAtLoginCheckbox)
         section.addArrangedSubview(loginItemStatusLabel)
         return section
