@@ -71,6 +71,8 @@ enum FlowSoundStrings {
         case exportAdapterProfileCompleted(String)
         case experimentalAdapters
         case importAdapterProfile
+        case importAdapterProfileCompleted(Int, String)
+        case importAdapterProfileEmpty(String)
         case neteaseAccessHelp
         case neteaseVolumeHelp
         case openAccessibilitySettings
@@ -191,9 +193,13 @@ enum FlowSoundStrings {
         case .experimentalAdapters:
             "Experimental adapters"
         case .importAdapterProfile:
-            "Import Profile..."
+            "Import Local Profiles"
+        case .importAdapterProfileCompleted(let count, let path):
+            "Imported \(count) adapter profile(s) from:\n\(path)"
+        case .importAdapterProfileEmpty(let path):
+            "No local adapter profile JSON files were found. Put .json profiles in this folder, then click Import Local Profiles again:\n\(path)"
         case .neteaseAccessHelp:
-            "Netease Cloud Music needs Accessibility permission because FlowSound controls its Controls menu. Open System Settings > Privacy & Security > Accessibility and allow FlowSound."
+            "Netease Cloud Music needs Accessibility permission because FlowSound controls its Controls menu. Open System Settings > Privacy & Security > Accessibility and allow FlowSound. After updating FlowSound, remove and re-add FlowSound if control still fails."
         case .neteaseVolumeHelp:
             "Netease volume restore is approximate. The app exposes relative menu steps, usually about 5%, not an exact readable volume."
         case .openAccessibilitySettings:
@@ -368,9 +374,13 @@ enum FlowSoundStrings {
         case .experimentalAdapters:
             "实验适配器"
         case .importAdapterProfile:
-            "导入配置..."
+            "导入本地配置"
+        case .importAdapterProfileCompleted(let count, let path):
+            "已从以下目录导入 \(count) 个适配器配置：\n\(path)"
+        case .importAdapterProfileEmpty(let path):
+            "未找到本地适配器 JSON 配置。请把 .json 配置文件放入此目录，然后再次点击“导入本地配置”：\n\(path)"
         case .neteaseAccessHelp:
-            "网易云音乐需要无障碍权限，因为 FlowSound 需要点击它的“控制”菜单。请在“系统设置 > 隐私与安全性 > 辅助功能”中允许 FlowSound。"
+            "网易云音乐需要无障碍权限，因为 FlowSound 需要点击它的“控制”菜单。请在“系统设置 > 隐私与安全性 > 辅助功能”中允许 FlowSound。更新 FlowSound 后如果仍然控制失败，请删除后重新添加 FlowSound。"
         case .neteaseVolumeHelp:
             "网易云音量恢复只能近似。它只暴露相对菜单步进，通常约 5%，不是可读取的精确音量。"
         case .openAccessibilitySettings:

@@ -59,7 +59,7 @@ The current build is a native Swift menu bar app with:
 - Apple Music and Spotify control through AppleScript and `osascript`.
 - A `MusicControlAdapter` capability model that separates official absolute-volume players from future experimental or community relative-step adapters.
 - Experimental Netease Cloud Music support through menu commands and relative-step fade control.
-- Adapter profile import/export for transparent community adapter metadata. Profiles are local JSON descriptions and do not trigger network requests or arbitrary script downloads.
+- Adapter profile import/export for transparent community adapter metadata. Profiles are local JSON descriptions, not executable plugins, and do not trigger network requests or arbitrary script downloads.
 - Fade-out, pause, play, and fade-in behavior.
 - Playback-state check so FlowSound only restores music that it paused itself.
 - Core Audio process tap monitoring for all non-selected-music-app audio by default.
@@ -186,6 +186,8 @@ Open `Preferences...` from the menu bar menu to configure:
 - Monitoring: audio monitoring mode, watched app bundle identifiers, and excluded app bundle identifiers.
 - Tools: recently detected audio sources, diagnostics window, and diagnostics log path.
 - Tools: adapter profile import/export for inspecting and sharing experimental or community adapter metadata.
+
+Adapter profiles currently describe identity, support level, bundle identifiers, declared capabilities, permissions, and notes. They do not contain executable control scripts and cannot add support for a brand-new player by themselves. Import reads `.json` profile files from `~/Library/Application Support/FlowSound/AdapterProfiles`; if the folder is empty, FlowSound opens it in Finder so you can place local profile files there.
 
 FlowSound validates bundle identifiers before saving. Invalid values are ignored and duplicates are removed. An empty watched list falls back to Safari and Telegram; an empty excluded list falls back to Apple Music, FlowSound, and common macOS notification services. The selected music app is always excluded from all-apps monitoring. Saving Preferences restarts the Core Audio process tap when FlowSound is active.
 

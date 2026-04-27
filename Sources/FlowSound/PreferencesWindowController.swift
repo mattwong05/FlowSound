@@ -1,5 +1,4 @@
 import AppKit
-import UniformTypeIdentifiers
 
 private final class FlippedDocumentView: NSView {
     override var isFlipped: Bool { true }
@@ -12,9 +11,9 @@ final class PreferencesWindowController {
         static let defaultHeight: CGFloat = 640
         static let minimumHeight: CGFloat = 420
         static let verticalChrome: CGFloat = 132
-        static let generalContentHeight: CGFloat = 620
-        static let monitoringContentHeight: CGFloat = 560
-        static let toolsContentHeight: CGFloat = 640
+        static let generalContentHeight: CGFloat = 560
+        static let monitoringContentHeight: CGFloat = 520
+        static let toolsContentHeight: CGFloat = 600
         static let contentWidth: CGFloat = 640
         static let labelWidth: CGFloat = 140
         static let fieldWidth: CGFloat = 86
@@ -845,16 +844,26 @@ final class PreferencesWindowController {
     }
 
     @objc private func importAdapterProfile() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.json]
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        guard panel.runModal() == .OK, let url = panel.url else {
-            return
-        }
         do {
-            try MusicAdapterProfileStore.shared.importProfile(from: url)
+            let directory = try Self.adapterProfileExportDirectory()
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let urls = try FileManager.default.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: nil
+            )
+            .filter { $0.pathExtension.lowercased() == "json" }
+
+            guard !urls.isEmpty else {
+                NSWorkspace.shared.open(directory)
+                showAlert(message: FlowSoundStrings.text(.importAdapterProfileEmpty(directory.path)))
+                return
+            }
+
+            for url in urls {
+                try MusicAdapterProfileStore.shared.importProfile(from: url)
+            }
             refreshAdapterProfiles()
+            showAlert(message: FlowSoundStrings.text(.importAdapterProfileCompleted(urls.count, directory.path)))
         } catch {
             showAlert(message: error.localizedDescription)
         }

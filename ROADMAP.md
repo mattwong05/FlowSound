@@ -102,8 +102,8 @@
 - Add a `MusicControlAdapter` capability model for official, experimental, and community player integrations.
 - Keep Apple Music and Spotify on the official absolute-volume adapter path.
 - Add Netease Cloud Music as an experimental relative-step adapter using menu-state playback detection and Core Audio output feedback.
-- Add adapter profile import/export for transparent community adapter metadata.
-- Defer Adapter Lab UI until the adapter capability model and profile format are stable.
+- Keep adapter profile import/export metadata-only until there is a reviewed sandbox model for user-authored control scripts.
+- Defer Adapter Lab UI until the adapter capability model, profile format, permission model, and debug workflow are stable.
 
 ## 1.0.0 Release Candidate
 

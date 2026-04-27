@@ -31,6 +31,7 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 - Changed the Preferences music app picker to show experimental support levels instead of presenting all adapters as official support.
 - Changed Netease Cloud Music restore to use a more conservative relative-step count to avoid increasing volume after each duck/restore cycle.
 - Changed Netease adapter profile export to write a local JSON file under Application Support and reveal it in Finder instead of using a save panel.
+- Changed adapter profile import to read local JSON files from FlowSound's Application Support profile folder instead of opening a panel.
 - Changed Netease menu automation to run inside FlowSound instead of `/usr/bin/osascript`, so Accessibility permission belongs to FlowSound.
 - Tightened Preferences tab layout so fixed-height scroll areas no longer stretch section spacing.
 - Tightened Preferences content heights again and removed the duplicated launch-at-login status text.
