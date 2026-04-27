@@ -17,6 +17,7 @@ enum AudioMonitoringMode: String, Sendable, Equatable, CaseIterable {
 enum ControlledMusicPlayer: String, Sendable, Equatable, CaseIterable {
     case appleMusic
     case spotify
+    case neteaseCloudMusic
 
     var displayName: String {
         switch self {
@@ -24,6 +25,8 @@ enum ControlledMusicPlayer: String, Sendable, Equatable, CaseIterable {
             "Apple Music"
         case .spotify:
             "Spotify"
+        case .neteaseCloudMusic:
+            "Netease Cloud Music (Experimental)"
         }
     }
 
@@ -33,6 +36,8 @@ enum ControlledMusicPlayer: String, Sendable, Equatable, CaseIterable {
             "Music"
         case .spotify:
             "Spotify"
+        case .neteaseCloudMusic:
+            "NeteaseMusic"
         }
     }
 
@@ -42,6 +47,17 @@ enum ControlledMusicPlayer: String, Sendable, Equatable, CaseIterable {
             ["com.apple.Music", "com.apple.iTunes"]
         case .spotify:
             ["com.spotify.client"]
+        case .neteaseCloudMusic:
+            ["com.netease.163music"]
+        }
+    }
+
+    var supportLevel: MusicAdapterSupportLevel {
+        switch self {
+        case .appleMusic, .spotify:
+            .official
+        case .neteaseCloudMusic:
+            .experimental
         }
     }
 }

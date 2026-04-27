@@ -2,17 +2,41 @@ import Foundation
 import Testing
 @testable import FlowSound
 
+@Test func appleScriptMusicAdaptersDeclareOfficialAbsoluteVolumeCapabilities() {
+    let appleMusicAdapter = AppleScriptMusicControlAdapter(player: .appleMusic)
+    let spotifyAdapter = AppleScriptMusicControlAdapter(player: .spotify)
+
+    #expect(appleMusicAdapter.descriptor.supportLevel == .official)
+    #expect(appleMusicAdapter.descriptor.capabilities.playbackState == .native)
+    #expect(appleMusicAdapter.descriptor.capabilities.volumeControl == .absolute)
+    #expect(appleMusicAdapter.descriptor.bundleIdentifiers == ["com.apple.Music", "com.apple.iTunes"])
+
+    #expect(spotifyAdapter.descriptor.supportLevel == .official)
+    #expect(spotifyAdapter.descriptor.capabilities.playbackState == .native)
+    #expect(spotifyAdapter.descriptor.capabilities.volumeControl == .absolute)
+    #expect(spotifyAdapter.descriptor.bundleIdentifiers == ["com.spotify.client"])
+}
+
+@Test func neteaseAdapterDeclaresExperimentalRelativeStepCapabilities() {
+    let adapter = NeteaseCloudMusicControlAdapter()
+
+    #expect(adapter.descriptor.supportLevel == .experimental)
+    #expect(adapter.descriptor.capabilities.playbackState == .menuState)
+    #expect(adapter.descriptor.capabilities.volumeControl == .relativeStep)
+    #expect(adapter.descriptor.bundleIdentifiers == ["com.netease.163music"])
+}
+
 @Test @MainActor func restoreVolumeIsPreservedWhenRestoreIsInterruptedByNewAudio() async throws {
     var settings = FlowSoundSettings.defaults
     settings.quietDuration = 0.05
     settings.fadeOutDuration = 0.1
     settings.fadeInDuration = 0.3
 
-    let musicController = RecordingMusicController(initialVolume: 21)
+    let musicAdapter = RecordingMusicAdapter(initialVolume: 21)
     let activityMonitor = TestAudioActivityMonitor()
     let service = FlowSoundService(
         settings: settings,
-        musicController: musicController,
+        musicAdapter: musicAdapter,
         activityMonitor: activityMonitor
     )
 
@@ -29,7 +53,7 @@ import Testing
     activityMonitor.emit(.quiet)
     try await waitForState(.listening, in: service, timeout: .seconds(3))
 
-    let finalVolume = try await musicController.currentVolume()
+    let finalVolume = try await musicAdapter.currentVolume()
     #expect(finalVolume == 21)
     #expect(service.state == .listening)
 }
@@ -40,12 +64,12 @@ import Testing
     settings.fadeOutDuration = 0.1
     settings.fadeInDuration = 0.1
 
-    let appleMusicController = RecordingMusicController(playerName: "Apple Music", initialVolume: 21)
-    let spotifyController = RecordingMusicController(playerName: "Spotify", initialVolume: 70)
+    let appleMusicAdapter = RecordingMusicAdapter(playerName: "Apple Music", initialVolume: 21)
+    let spotifyAdapter = RecordingMusicAdapter(playerName: "Spotify", initialVolume: 70)
     let activityMonitor = TestAudioActivityMonitor()
     let service = FlowSoundService(
         settings: settings,
-        musicController: appleMusicController,
+        musicAdapter: appleMusicAdapter,
         activityMonitor: activityMonitor
     )
 
@@ -54,12 +78,12 @@ import Testing
     try await waitForState(.pausedByFlowSound, in: service)
 
     settings.controlledMusicPlayer = .spotify
-    service.updateSettings(settings, musicController: spotifyController)
+    service.updateSettings(settings, musicAdapter: spotifyAdapter)
     activityMonitor.emit(.quiet)
     try await Task.sleep(for: .milliseconds(150))
 
     #expect(service.state == .listening)
-    #expect(try await spotifyController.currentVolume() == 70)
+    #expect(try await spotifyAdapter.currentVolume() == 70)
 }
 
 @MainActor
@@ -77,13 +101,24 @@ private func waitForState(
     #expect(service.state == expectedState, sourceLocation: sourceLocation)
 }
 
-private actor RecordingMusicController: MusicController {
+private actor RecordingMusicAdapter: AbsoluteVolumeMusicControlAdapter {
     nonisolated let playerName: String
+    nonisolated let descriptor: MusicControlAdapterDescriptor
     private var volume: Int
     private var state: MusicPlaybackState = .playing
 
     init(playerName: String = "Test Music", initialVolume: Int) {
         self.playerName = playerName
+        descriptor = MusicControlAdapterDescriptor(
+            id: "test.\(playerName.lowercased().replacingOccurrences(of: " ", with: "-"))",
+            displayName: playerName,
+            supportLevel: .official,
+            bundleIdentifiers: ["test.\(playerName.lowercased().replacingOccurrences(of: " ", with: "-"))"],
+            capabilities: MusicAdapterCapabilities(
+                playbackState: .native,
+                volumeControl: .absolute
+            )
+        )
         volume = initialVolume
     }
 
@@ -96,6 +131,25 @@ private actor RecordingMusicController: MusicController {
     }
 
     func setVolume(_ volume: Int) async throws {
+        self.volume = volume
+    }
+
+    func duck(settings: FlowSoundSettings) async throws -> MusicRestoreTarget? {
+        guard state == .playing else {
+            return nil
+        }
+        let target = MusicRestoreTarget.absoluteVolume(volume)
+        volume = 0
+        state = .paused
+        return target
+    }
+
+    func restore(_ target: MusicRestoreTarget, settings: FlowSoundSettings) async throws {
+        guard case .absoluteVolume(let volume) = target else {
+            return
+        }
+        state = .playing
+        try await Task.sleep(for: .seconds(settings.fadeInDuration))
         self.volume = volume
     }
 

@@ -7,12 +7,12 @@
     <title>FlowSound</title>
     <meta
       name="description"
-      content="FlowSound is a tiny open-source macOS menu bar app that auto-fades Apple Music or Spotify when other apps play audio."
+      content="FlowSound is a tiny open-source macOS menu bar app that auto-fades Apple Music, Spotify, or experimental Netease Cloud Music when other apps play audio."
     >
     <meta property="og:title" content="FlowSound">
     <meta
       property="og:description"
-      content="A tiny open-source macOS menu bar app that auto-fades Apple Music or Spotify when other apps play audio."
+      content="A tiny open-source macOS menu bar app that auto-fades Apple Music, Spotify, or experimental Netease Cloud Music when other apps play audio."
     >
     <meta property="og:type" content="website">
     <meta property="og:image" content="/assets/flowsound-logo-light.png">
@@ -44,7 +44,7 @@
           <p class="eyebrow" data-i18n="eyebrow">Open-source macOS menu bar app</p>
           <h1 data-i18n="heroTitle">Music that knows when to step aside.</h1>
           <p class="hero-text" data-i18n="heroText">
-            FlowSound fades and pauses Apple Music or Spotify when other apps play audio, then restores it when things become quiet again.
+            FlowSound fades and pauses Apple Music or Spotify when other apps play audio, then restores it when things become quiet again. Netease Cloud Music is available as an experimental adapter.
           </p>
           <div class="actions">
             <a class="button primary" data-i18n="download" href="https://github.com/mattwong05/FlowSound/releases/latest">
@@ -55,7 +55,7 @@
             </a>
           </div>
           <p class="note" data-i18n="heroNote">
-            Built for macOS 15+. Apple Music and Spotify. English and Chinese. Local-first, no analytics.
+            Built for macOS 15+. Official Apple Music and Spotify support. Experimental Netease Cloud Music. Local-first, no analytics.
           </p>
           <div class="product-hunt-badge">
             <span data-i18n="productHuntLabel">Featured on</span>
@@ -92,7 +92,7 @@
                 <span data-i18n="withoutBadge">manual</span>
               </div>
               <div class="track-row">
-                <span data-i18n="appleMusicLabel">Apple Music / Spotify</span>
+                <span data-i18n="appleMusicLabel">Apple Music / Spotify / Netease</span>
                 <div class="track-line music-line full-line"></div>
               </div>
               <div class="track-row">
@@ -108,7 +108,7 @@
                 <span data-i18n="withBadge">automatic</span>
               </div>
               <div class="track-row">
-                <span data-i18n="appleMusicLabel">Apple Music / Spotify</span>
+                <span data-i18n="appleMusicLabel">Apple Music / Spotify / Netease</span>
                 <div class="timeline">
                   <i class="music-play"></i>
                   <i class="music-fade-out"></i>
@@ -193,7 +193,7 @@
           </div>
           <div>
             <h3 data-i18n="automationTitle">Automation</h3>
-            <p data-i18n="automationText">Used to control Apple Music or Spotify volume and playback.</p>
+            <p data-i18n="automationText">Used to control the selected music app. Experimental adapters may also need Accessibility for menu commands.</p>
           </div>
           <div>
             <h3 data-i18n="loginTitle">Login Item</h3>
@@ -223,7 +223,7 @@
           <details>
             <summary data-i18n="faqOtherPlayersQ">Can it support other music apps?</summary>
             <p data-i18n="faqOtherPlayersA">
-              Apple Music and Spotify are supported today. Other apps can be adapted if they expose reliable local playback and volume control.
+              Apple Music and Spotify are official. Netease Cloud Music is experimental and uses menu commands plus Core Audio output feedback, so it may break if the app menu changes.
             </p>
           </details>
           <details>

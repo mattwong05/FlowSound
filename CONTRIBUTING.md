@@ -109,7 +109,9 @@ Keep the landing page copy straightforward. The page should explain what FlowSou
 
 - Keep business logic testable outside the menu bar UI.
 - Put Core Audio code behind a narrow `AudioWatcher` interface.
-- Put music app automation behind a narrow `MusicController` interface.
+- Put music app automation behind a narrow `MusicControlAdapter` interface.
+- Declare adapter capabilities and support level before wiring a player into product flows.
+- Keep experimental or community adapters out of the official support path until their playback-state, volume-control, permission, and restore behavior are validated.
 - Do not let AppleScript own state transitions.
 - Keep permission errors visible in app state and logs.
 

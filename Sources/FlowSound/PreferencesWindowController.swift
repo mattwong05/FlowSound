@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 
 private final class FlippedDocumentView: NSView {
     override var isFlipped: Bool { true }
@@ -13,7 +14,7 @@ final class PreferencesWindowController {
         static let verticalChrome: CGFloat = 132
         static let generalContentHeight: CGFloat = 500
         static let monitoringContentHeight: CGFloat = 620
-        static let toolsContentHeight: CGFloat = 470
+        static let toolsContentHeight: CGFloat = 600
         static let contentWidth: CGFloat = 640
         static let labelWidth: CGFloat = 140
         static let fieldWidth: CGFloat = 86
@@ -73,6 +74,7 @@ final class PreferencesWindowController {
     private let excludedBundleIdentifiersTextView = NSTextView()
     private let recentSourcesStack = NSStackView()
     private let recentSourcesDocumentView = FlippedDocumentView()
+    private let adapterProfilesStack = NSStackView()
 
     init(settingsStore: FlowSoundSettingsStore) {
         self.settingsStore = settingsStore
@@ -306,6 +308,14 @@ final class PreferencesWindowController {
             help: FlowSoundStrings.text(.toolsDiagnosticsHelp),
             rows: [makeDiagnosticsRow()]
         ))
+        content.addArrangedSubview(makeSection(
+            title: FlowSoundStrings.text(.adapterProfiles),
+            help: FlowSoundStrings.text(.adapterProfilesHelp),
+            rows: [
+                makeAdapterProfileActionsRow(),
+                makeAdapterProfilesList()
+            ]
+        ))
         return content
     }
 
@@ -330,7 +340,8 @@ final class PreferencesWindowController {
     private func makeMusicPlayerRow() -> NSStackView {
         musicPlayerPopup.removeAllItems()
         for player in ControlledMusicPlayer.allCases {
-            musicPlayerPopup.addItem(withTitle: player.displayName)
+            let title = player.supportLevel == .official ? player.displayName : "\(player.displayName) - \(player.supportLevel.rawValue)"
+            musicPlayerPopup.addItem(withTitle: title)
             musicPlayerPopup.lastItem?.representedObject = player.rawValue
         }
         setFixedWidth(220, for: musicPlayerPopup)
@@ -447,6 +458,23 @@ final class PreferencesWindowController {
         return row
     }
 
+    private func makeAdapterProfileActionsRow() -> NSStackView {
+        let row = NSStackView()
+        row.orientation = .horizontal
+        row.spacing = 10
+        row.addArrangedSubview(NSButton(title: FlowSoundStrings.text(.importAdapterProfile), target: self, action: #selector(importAdapterProfile)))
+        row.addArrangedSubview(NSButton(title: FlowSoundStrings.text(.exportBundledAdapterProfile), target: self, action: #selector(exportNeteaseAdapterProfile)))
+        return row
+    }
+
+    private func makeAdapterProfilesList() -> NSStackView {
+        adapterProfilesStack.orientation = .vertical
+        adapterProfilesStack.alignment = .leading
+        adapterProfilesStack.spacing = 6
+        refreshAdapterProfiles()
+        return adapterProfilesStack
+    }
+
     private func makeButtonRow() -> NSStackView {
         let row = NSStackView()
         row.orientation = .horizontal
@@ -533,7 +561,8 @@ final class PreferencesWindowController {
             rebuildWindow()
         } else {
             populateFields()
-            refreshRecentAudioSources()
+        refreshRecentAudioSources()
+        refreshAdapterProfiles()
         }
     }
 
@@ -647,6 +676,20 @@ final class PreferencesWindowController {
             recentSourcesStack.addArrangedSubview(makeRecentSourceRow(source))
         }
         updateRecentSourcesDocumentHeight(rowCount: sources.count)
+    }
+
+    private func refreshAdapterProfiles() {
+        adapterProfilesStack.arrangedSubviews.forEach { view in
+            adapterProfilesStack.removeArrangedSubview(view)
+            view.removeFromSuperview()
+        }
+
+        for profile in MusicAdapterProfileStore.shared.profiles {
+            let label = NSTextField(wrappingLabelWithString: "\(profile.displayName) - \(profile.supportLevel.rawValue) - \(profile.playbackStateCapability.rawValue) / \(profile.volumeControlCapability.rawValue)")
+            label.textColor = profile.supportLevel == .official ? .labelColor : .secondaryLabelColor
+            label.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
+            adapterProfilesStack.addArrangedSubview(label)
+        }
     }
 
     private func updateRecentSourcesDocumentHeight(rowCount: Int) {
@@ -777,6 +820,47 @@ final class PreferencesWindowController {
 
     @objc private func showDiagnostics() {
         diagnosticsWindowController.show()
+    }
+
+    @objc private func importAdapterProfile() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return
+        }
+        do {
+            try MusicAdapterProfileStore.shared.importProfile(from: url)
+            refreshAdapterProfiles()
+        } catch {
+            showAlert(message: error.localizedDescription)
+        }
+    }
+
+    @objc private func exportNeteaseAdapterProfile() {
+        guard let profile = MusicAdapterProfileStore.bundledProfiles.first(where: { $0.id == "community.netease-cloud-music.menu-tap" }) else {
+            return
+        }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "netease-cloud-music.flowsound-adapter.json"
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return
+        }
+        do {
+            try MusicAdapterProfileStore.shared.exportProfile(profile, to: url)
+        } catch {
+            showAlert(message: error.localizedDescription)
+        }
+    }
+
+    private func showAlert(message: String) {
+        let alert = NSAlert()
+        alert.messageText = FlowSoundStrings.text(.adapterProfiles)
+        alert.informativeText = message
+        alert.alertStyle = .warning
+        alert.runModal()
     }
 
     @objc private func copyDiagnosticsPath() {

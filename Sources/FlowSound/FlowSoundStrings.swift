@@ -65,6 +65,10 @@ enum FlowSoundStrings {
         case appStatusWatched
         case appStatusDetected
         case appStatusSelectedMusic
+        case adapterProfiles
+        case adapterProfilesHelp
+        case exportBundledAdapterProfile
+        case importAdapterProfile
         case audioMonitoring
         case audioMonitoringHelp
         case automationUnavailable(String)
@@ -171,6 +175,14 @@ enum FlowSoundStrings {
             "Detected"
         case .appStatusSelectedMusic:
             "Selected music app"
+        case .adapterProfiles:
+            "Adapter Profiles"
+        case .adapterProfilesHelp:
+            "Import or export transparent adapter profiles. Imported profiles are metadata only; FlowSound does not run arbitrary downloaded scripts."
+        case .exportBundledAdapterProfile:
+            "Export Netease Profile"
+        case .importAdapterProfile:
+            "Import Profile..."
         case .audioMonitoring:
             "Audio monitoring"
         case .audioMonitoringHelp:
@@ -240,7 +252,7 @@ enum FlowSoundStrings {
         case .musicPlayer:
             "Music app"
         case .musicPlayerHelp:
-            "FlowSound controls this app through local AppleScript."
+            "Official adapters use native AppleScript. Experimental adapters may use menu commands and extra permissions."
         case .openLoginItems:
             "Open Login Items"
         case .pausedByFlowSound(let player):
@@ -330,6 +342,14 @@ enum FlowSoundStrings {
             "已检测到"
         case .appStatusSelectedMusic:
             "当前音乐 App"
+        case .adapterProfiles:
+            "适配器配置"
+        case .adapterProfilesHelp:
+            "导入或导出透明的适配器配置。导入的配置目前只作为元数据保存；FlowSound 不会执行任意下载脚本。"
+        case .exportBundledAdapterProfile:
+            "导出网易云配置"
+        case .importAdapterProfile:
+            "导入配置..."
         case .audioMonitoring:
             "音频监听"
         case .audioMonitoringHelp:
@@ -399,7 +419,7 @@ enum FlowSoundStrings {
         case .musicPlayer:
             "音乐 App"
         case .musicPlayerHelp:
-            "FlowSound 会通过本地 AppleScript 控制这个 App。"
+            "官方适配器使用原生 AppleScript。实验适配器可能使用菜单命令并需要额外权限。"
         case .openLoginItems:
             "打开登录项"
         case .pausedByFlowSound(let player):

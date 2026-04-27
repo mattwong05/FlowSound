@@ -1,15 +1,15 @@
 # Install FlowSound
 
-FlowSound is a native macOS menu bar app for Apple Music and Spotify.
+FlowSound is a native macOS menu bar app for Apple Music and Spotify, with experimental Netease Cloud Music support.
 
 ## Requirements
 
 - macOS 15 or newer.
-- Apple Music or Spotify installed and available.
+- Apple Music, Spotify, or Netease Cloud Music installed and available.
 - Permission to capture system audio activity.
 - Permission to control Music through Apple Events / Automation.
 
-FlowSound currently controls Apple Music and Spotify through local AppleScript. Other music apps can be adapted if they expose reliable local playback and volume control.
+FlowSound officially controls Apple Music and Spotify through local AppleScript. Netease Cloud Music is experimental and uses menu commands, Accessibility permission, and Core Audio output feedback because it does not expose the same native playback and volume AppleScript interface.
 
 ## Recommended Install
 
@@ -34,7 +34,8 @@ FlowSound lives in the menu bar. It does not appear in the Dock.
 macOS may ask for:
 
 - Audio capture permission, so FlowSound can detect whether other apps are producing audio.
-- Automation permission, so FlowSound can control Apple Music or Spotify playback and volume.
+- Automation permission, so FlowSound can control the selected music app.
+- Accessibility permission for experimental menu-command adapters such as Netease Cloud Music.
 - Login Item approval, only if you enable Launch at Login in Preferences.
 
 FlowSound does not record audio, save captured audio, upload data, or use analytics.

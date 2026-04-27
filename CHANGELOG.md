@@ -14,6 +14,23 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.15.0] - 2026-04-28
+
+### Added
+
+- Added a `MusicControlAdapter` capability model for official, experimental, and community music app integrations.
+- Added adapter metadata for support level, bundle identifiers, playback-state capability, and volume-control capability.
+- Added Netease Cloud Music as an experimental adapter using menu-state playback detection, relative volume steps, and Core Audio output feedback.
+- Added adapter profile import/export for transparent community adapter metadata.
+- Added tests that verify Apple Music and Spotify remain official absolute-volume adapters.
+- Added tests for the Netease experimental adapter descriptor and adapter profile import/export.
+
+### Changed
+
+- Migrated the existing AppleScript music control path to `AppleScriptMusicControlAdapter` while preserving current Apple Music and Spotify behavior.
+- Changed the Preferences music app picker to show experimental support levels instead of presenting all adapters as official support.
+- Updated architecture and contributor documentation to keep future community adapters separate from official native support.
+
 ## [0.14.4] - 2026-04-22
 
 ### Changed

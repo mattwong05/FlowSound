@@ -55,17 +55,24 @@ Responsibilities:
 - Keep process-output polling diagnostic-only in all-apps mode to avoid stale process state stretching quiet detection.
 - Avoid sending duplicate state changes.
 
-### MusicController
+### MusicControlAdapter
 
-Controls Apple Music or Spotify through a narrow automation adapter. The current implementation uses `osascript` to run short AppleScript commands. Additional music apps should be added behind the same boundary when they expose reliable local playback and volume control.
+Controls music apps through a narrow automation adapter boundary. The current official implementations use `osascript` to run short AppleScript commands for Apple Music and Spotify.
 
 Responsibilities:
 
-- Read and store the selected music app volume before FlowSound changes it.
-- Read the selected music app playback state before ducking.
-- Fade volume down and up.
+- Declare adapter identity, support level, bundle identifiers, playback-state capability, and volume-control capability.
+- Read and store the selected music app volume before FlowSound changes it when the adapter supports absolute volume.
+- Read the selected music app playback state before ducking through the adapter's declared strategy.
+- Fade volume down and up through an adapter-appropriate control model.
 - Pause and play the selected music app.
 - Report automation failures without hiding them.
+
+`AbsoluteVolumeMusicControlAdapter` is the stable path used by Apple Music and Spotify. It exposes native playback-state reads plus `0...100` volume reads and writes. Future experimental or community adapters can declare other capabilities, such as menu-derived playback state or relative-step volume control, without pretending that every player exposes a reliable absolute volume.
+
+Netease Cloud Music is wired as an experimental adapter. It reads playback state from the Controls menu (`Pause` means playing, `Play` means paused), fades out with relative volume-down menu commands until the app's Core Audio output probe reports sustained silence, pauses through the menu, and restores with one fewer relative volume-up step by default to avoid overshooting the user's previous loudness.
+
+Adapter profiles are JSON metadata that describe support level, bundle identifiers, capabilities, permissions, and notes. FlowSound can import and export profiles for review and sharing, but imported profiles are not executed as arbitrary scripts.
 
 ### DuckingStateMachine
 
@@ -195,11 +202,11 @@ flowchart LR
     Apps["Other app audio"] --> AudioWatcher["AudioWatcher"]
     AudioWatcher --> SignalDetector["SignalDetector"]
     SignalDetector --> StateMachine["DuckingStateMachine"]
-    StateMachine --> MusicController["MusicController"]
+    StateMachine --> MusicControlAdapter["MusicControlAdapter"]
     Menu["Menu bar toggle"] --> StateMachine
     Settings["SettingsStore"] --> AudioWatcher
     Settings --> SignalDetector
-    Settings --> MusicController
+    Settings --> MusicControlAdapter
     Settings --> LoginItem["LoginItemController"]
 ```
 
@@ -210,7 +217,8 @@ flowchart LR
 - Use an excluded bundle identifier list to filter the selected music app, FlowSound, and common notification services from all-apps monitoring.
 - Use Core Audio process-output polling as a fallback activity source when a matching process is actively outputting audio.
 - Record recent Core Audio output processes for Preferences > Tools so users can discover real bundle identifiers without guessing.
-- Use AppleScript as a small adapter instead of ScriptingBridge-heavy integration.
+- Use AppleScript as a small official adapter implementation instead of ScriptingBridge-heavy integration.
+- Keep adapter capability metadata explicit so unreliable player integrations can be labeled experimental or community-supported instead of being presented as native support.
 - Use Core Audio bundle-ID tap configuration on macOS 26 and newer. On macOS 15-25, use current Core Audio process object IDs because `CATapDescription.bundleIDs` and process restoration are macOS 26+ API.
 - Keep the first version local-only with no network service.
 - Treat permission failures as first-class app states.

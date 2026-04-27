@@ -30,9 +30,9 @@ Recommended first detector:
 - Mark app audio as audible only when RMS remains above the configured threshold for 1 second.
 - Mark the system as quiet only when matching apps remain below threshold for the configured quiet duration, currently 3 seconds by default.
 
-### Controlling Apple Music and Spotify
+### Controlling Music Apps
 
-Apple Music and Spotify can be controlled through Apple Events exposed to AppleScript. FlowSound should not put core product logic in AppleScript. Instead, Swift should own the state machine and call a small automation adapter for:
+Apple Music and Spotify can be controlled through Apple Events exposed to AppleScript. Netease Cloud Music is experimental because it does not expose the same native playback and volume interface; FlowSound controls it through menu-state detection, relative volume menu commands, and Core Audio output feedback. FlowSound should not put core product logic in AppleScript. Instead, Swift should own the state machine and call a small automation adapter for:
 
 - `play`
 - `pause`
@@ -112,7 +112,7 @@ Do not include advanced UI, per-app configuration, launch-at-login, or distribut
 
 ## Current Implementation Status
 
-Version 0.14.x contains the native menu bar shell, default activation on launch, icon-only active and deactivated menu bar states, Core Audio process tap monitoring, all-apps-except-selected-music-app monitoring mode, excluded notification services, watched-app-only mode, Safari WebKit helper expansion, process-output fallback diagnostics, recent audio source discovery, RMS activity detection, state machine, Apple Music and Spotify automation adapters, bilingual app UI with language selection, tabbed Preferences, app bundle packaging, release archive packaging, checksums, logo assets, app icon, launch-at-login control, manual audio activity simulation, and a static Cloudflare Pages landing page.
+Version 0.15.x contains the native menu bar shell, default activation on launch, icon-only active and deactivated menu bar states, Core Audio process tap monitoring, all-apps-except-selected-music-app monitoring mode, excluded notification services, watched-app-only mode, Safari WebKit helper expansion, process-output fallback diagnostics, recent audio source discovery, RMS activity detection, state machine, Apple Music and Spotify official automation adapters, experimental Netease Cloud Music adapter, adapter profile import/export, bilingual app UI with language selection, tabbed Preferences, app bundle packaging, release archive packaging, checksums, logo assets, app icon, launch-at-login control, manual audio activity simulation, and a static Cloudflare Pages landing page.
 
 This means the current build can validate system audio capture permission prompts, Apple Music and Spotify permission prompts, fade behavior, pause/resume behavior, menu controls, state transitions, all-apps monitoring, default Safari / Telegram watched-app-only detection, and custom watched app bundle identifiers.
 

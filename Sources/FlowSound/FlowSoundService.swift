@@ -7,12 +7,12 @@ final class FlowSoundService {
     var onStateChanged: StateHandler?
 
     private var settings: FlowSoundSettings
-    private var musicController: MusicController
+    private var musicAdapter: any MusicControlAdapter
     private let activityMonitor: AudioActivityMonitor
     private var stateMachine = DuckingStateMachine()
     private var currentTask: Task<Void, Never>?
     private var quietTask: Task<Void, Never>?
-    private var restoreVolume: Int?
+    private var restoreTarget: MusicRestoreTarget?
     private var pausedByFlowSound = false
 
     private(set) var state: DuckingState = .disabled {
@@ -23,11 +23,11 @@ final class FlowSoundService {
 
     init(
         settings: FlowSoundSettings,
-        musicController: MusicController,
+        musicAdapter: any MusicControlAdapter,
         activityMonitor: AudioActivityMonitor
     ) {
         self.settings = settings
-        self.musicController = musicController
+        self.musicAdapter = musicAdapter
         self.activityMonitor = activityMonitor
         self.activityMonitor.onActivityChanged = { [weak self] activity in
             self?.handle(activity)
@@ -56,10 +56,10 @@ final class FlowSoundService {
         transition(.disable)
     }
 
-    func updateSettings(_ newSettings: FlowSoundSettings, musicController newMusicController: MusicController? = nil) {
+    func updateSettings(_ newSettings: FlowSoundSettings, musicAdapter newMusicAdapter: (any MusicControlAdapter)? = nil) {
         let musicPlayerChanged = newSettings.controlledMusicPlayer != settings.controlledMusicPlayer
-        if let newMusicController {
-            musicController = newMusicController
+        if let newMusicAdapter {
+            musicAdapter = newMusicAdapter
         }
         settings = newSettings
         guard state != .disabled else { return }
@@ -68,11 +68,11 @@ final class FlowSoundService {
             if musicPlayerChanged {
                 currentTask?.cancel()
                 quietTask?.cancel()
-                restoreVolume = nil
+                restoreTarget = nil
                 pausedByFlowSound = false
                 stateMachine = DuckingStateMachine()
                 state = stateMachine.send(.enable)
-                FlowSoundDiagnostics.log("service reset ducking state after music app changed to \(musicController.playerName)")
+                FlowSoundDiagnostics.log("service reset ducking state after music app changed to \(musicAdapter.playerName)")
             }
             activityMonitor.stop()
             try activityMonitor.start(settings: newSettings)
@@ -83,7 +83,7 @@ final class FlowSoundService {
     }
 
     private func handle(_ activity: AudioActivity) {
-        FlowSoundDiagnostics.log("service received audio activity: \(activity == .active ? "active" : "quiet") while \(state.label(playerName: musicController.playerName))")
+        FlowSoundDiagnostics.log("service received audio activity: \(activity == .active ? "active" : "quiet") while \(state.label(playerName: musicAdapter.playerName))")
         switch activity {
         case .active:
             quietTask?.cancel()
@@ -108,32 +108,30 @@ final class FlowSoundService {
     }
 
     private func startDucking() {
-        let controller = musicController
-        let playerName = controller.playerName
+        let adapter = musicAdapter
+        let playerName = adapter.playerName
         FlowSoundDiagnostics.log("starting \(playerName) ducking")
         currentTask?.cancel()
         currentTask = Task { [weak self] in
             guard let self else { return }
 
             do {
-                let playbackState = try await controller.playbackState()
-                guard playbackState == .playing else {
+                let target = try await adapter.duck(settings: settings)
+                guard let target else {
+                    let playbackState = try await adapter.playbackState()
                     FlowSoundDiagnostics.log("\(playerName) is \(playbackState.label); skipping duck and restore")
-                    restoreVolume = nil
+                    restoreTarget = nil
                     pausedByFlowSound = false
                     transition(.duckSkipped)
                     return
                 }
-                let currentVolume = try await controller.currentVolume()
-                if let restoreVolume {
-                    FlowSoundDiagnostics.log("preserving \(playerName) restore volume \(restoreVolume), fading out from \(currentVolume) over \(settings.fadeOutDuration) seconds")
+                if let restoreTarget {
+                    FlowSoundDiagnostics.log("preserving \(playerName) restore target \(restoreTarget), ignoring in-progress duck target \(target)")
                 } else {
-                    restoreVolume = currentVolume
-                    FlowSoundDiagnostics.log("captured \(playerName) volume \(currentVolume), fading out over \(settings.fadeOutDuration) seconds")
+                    FlowSoundDiagnostics.log("captured \(playerName) restore target \(target)")
+                    restoreTarget = target
                 }
-                try await fadeVolume(from: currentVolume, to: 0, duration: settings.fadeOutDuration, controller: controller)
                 guard !Task.isCancelled else { return }
-                try await controller.pause()
                 pausedByFlowSound = true
                 FlowSoundDiagnostics.log("\(playerName) paused by FlowSound")
                 transition(.duckCompleted)
@@ -146,13 +144,13 @@ final class FlowSoundService {
     }
 
     private func startRestoring() {
-        guard pausedByFlowSound || restoreVolume != nil else {
+        guard pausedByFlowSound || restoreTarget != nil else {
             transition(.restoreCompleted)
             return
         }
 
-        let controller = musicController
-        let playerName = controller.playerName
+        let adapter = musicAdapter
+        let playerName = adapter.playerName
         FlowSoundDiagnostics.log("starting \(playerName) restore")
         transition(.watchedAudioStopped)
         currentTask?.cancel()
@@ -160,18 +158,12 @@ final class FlowSoundService {
             guard let self else { return }
 
             do {
-                let targetVolume = restoreVolume ?? FlowSoundConstants.defaultRestoreVolume
-                if pausedByFlowSound {
-                    try await controller.play()
-                    FlowSoundDiagnostics.log("\(playerName) play sent, fading in to \(targetVolume) over \(settings.fadeInDuration) seconds")
-                    try await fadeVolume(from: 0, to: targetVolume, duration: settings.fadeInDuration, controller: controller)
-                } else {
-                    let currentVolume = try await controller.currentVolume()
-                    try await fadeVolume(from: currentVolume, to: targetVolume, duration: settings.fadeInDuration, controller: controller)
-                }
+                let target = restoreTarget ?? .absoluteVolume(FlowSoundConstants.defaultRestoreVolume)
+                FlowSoundDiagnostics.log("\(playerName) restore target \(target)")
+                try await adapter.restore(target, settings: settings)
                 guard !Task.isCancelled else { return }
                 pausedByFlowSound = false
-                restoreVolume = nil
+                restoreTarget = nil
                 FlowSoundDiagnostics.log("\(playerName) restore completed")
                 transition(.restoreCompleted)
             } catch {
@@ -182,22 +174,11 @@ final class FlowSoundService {
         }
     }
 
-    private func fadeVolume(from start: Int, to end: Int, duration: TimeInterval, controller: MusicController) async throws {
-        let steps = max(1, Int(duration / FlowSoundConstants.fadeStepDuration))
-        for step in 0...steps {
-            try Task.checkCancellation()
-            let progress = Double(step) / Double(steps)
-            let volume = Int(round(Double(start) + (Double(end - start) * progress)))
-            try await controller.setVolume(volume)
-            try await Task.sleep(for: .seconds(FlowSoundConstants.fadeStepDuration))
-        }
-    }
-
     private func transition(_ event: DuckingEvent) {
         let oldState = state
         state = stateMachine.send(event)
         if oldState != state {
-            FlowSoundDiagnostics.log("state transition: \(oldState.label(playerName: musicController.playerName)) -> \(state.label(playerName: musicController.playerName))")
+            FlowSoundDiagnostics.log("state transition: \(oldState.label(playerName: musicAdapter.playerName)) -> \(state.label(playerName: musicAdapter.playerName))")
         }
     }
 }

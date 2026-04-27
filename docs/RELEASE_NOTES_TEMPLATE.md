@@ -1,11 +1,11 @@
 # FlowSound VERSION
 
-FlowSound is a native macOS menu bar app that fades and pauses Apple Music or Spotify when other apps start playing audio, then restores the selected music app after things become quiet again.
+FlowSound is a native macOS menu bar app that fades and pauses Apple Music or Spotify when other apps start playing audio, then restores the selected music app after things become quiet again. Netease Cloud Music is available as an experimental adapter.
 
 ## Compatibility
 
 - macOS 15 or newer.
-- Apple Music or Spotify.
+- Apple Music, Spotify, or experimental Netease Cloud Music.
 
 ## Download
 
@@ -23,7 +23,8 @@ shasum -a 256 -c SHA256SUMS.txt
 FlowSound may ask macOS for:
 
 - System audio capture permission to detect app audio activity.
-- Automation permission to control Apple Music or Spotify playback and volume.
+- Automation permission to control the selected music app.
+- Accessibility permission for experimental menu-command adapters such as Netease Cloud Music.
 - Login Item approval if Launch at Login is enabled.
 
 FlowSound does not record audio, upload data, use analytics, or contact a server.
@@ -43,6 +44,6 @@ See `INSTALL.md` for details.
 
 ## Known Limitations
 
-- FlowSound controls Apple Music and Spotify in the current release. Other music apps can be adapted if they expose reliable local playback and volume control.
+- Apple Music and Spotify are official support paths. Netease Cloud Music is experimental and can break if its menu layout changes.
 - Unsigned builds are ad-hoc signed for bundle integrity but may still require manual Gatekeeper approval.
 - Launch at Login should be validated with signed and installed builds.

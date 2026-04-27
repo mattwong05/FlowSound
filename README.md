@@ -1,6 +1,6 @@
 # FlowSound
 
-FlowSound is a macOS menu bar app that keeps Apple Music or Spotify playing as background music, then automatically fades and pauses it when other apps start playing audio. When those apps become quiet again, FlowSound resumes the selected music app and fades it back to the previous volume.
+FlowSound is a macOS menu bar app that keeps Apple Music or Spotify playing as background music, then automatically fades and pauses it when other apps start playing audio. When those apps become quiet again, FlowSound resumes the selected music app and fades it back to the previous volume. Netease Cloud Music is available as an experimental adapter.
 
 The target platform is macOS 15+. FlowSound uses Core Audio process taps for outgoing process audio detection. On macOS 26 and newer it can configure taps by bundle identifier; on macOS 15-25 it falls back to process object IDs available when the tap starts.
 
@@ -42,9 +42,9 @@ FlowSound is open source and designed to be local-first:
 - No audio uploads.
 - No saved captured audio.
 
-FlowSound detects whether other apps are producing audio, then controls Apple Music or Spotify locally through Apple Events. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md) for details.
+FlowSound detects whether other apps are producing audio, then controls the selected music app locally through Apple Events or explicit adapter commands. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md) for details.
 
-Apple Music and Spotify are the supported music apps in the current release. Additional music apps can be adapted if they expose reliable local playback and volume control.
+Apple Music and Spotify are official supported music apps. Netease Cloud Music is experimental: it uses menu-state playback detection, relative volume steps, Accessibility permission, and Core Audio output feedback to confirm fade-out silence.
 
 ## Current Implementation
 
@@ -53,6 +53,9 @@ The current build is a native Swift menu bar app with:
 - One-click enable and disable from the menu bar.
 - A tested ducking state machine.
 - Apple Music and Spotify control through AppleScript and `osascript`.
+- A `MusicControlAdapter` capability model that separates official absolute-volume players from future experimental or community relative-step adapters.
+- Experimental Netease Cloud Music support through menu commands and relative-step fade control.
+- Adapter profile import/export for transparent community adapter metadata.
 - Fade-out, pause, play, and fade-in behavior.
 - Playback-state check so FlowSound only restores music that it paused itself.
 - Core Audio process tap monitoring for all non-selected-music-app audio by default.
@@ -93,7 +96,7 @@ FlowSound is implemented as a native Swift app:
 - App shell: AppKit menu bar integration.
 - Audio detection: Core Audio process taps through the `AudioActivityMonitor` boundary.
 - Signal analysis: short-window RMS or peak detection.
-- Music app control: AppleScript executed through a narrow Swift wrapper for Apple Music or Spotify.
+- Music app control: `MusicControlAdapter` implementations. Current official adapters use AppleScript for Apple Music and Spotify with native playback-state and absolute-volume control.
 - Coordination: explicit state machine to avoid repeated pause/resume loops.
 - Configuration: local settings for selected music app, language, monitoring mode, whitelist, exclusions, thresholds, fade durations, and enablement.
 
@@ -178,6 +181,7 @@ Open `Preferences...` from the menu bar menu to configure:
 - General: language, music app, timing, and launch at login.
 - Monitoring: audio monitoring mode, watched app bundle identifiers, and excluded app bundle identifiers.
 - Tools: recently detected audio sources, diagnostics window, and diagnostics log path.
+- Tools: adapter profile import/export for inspecting and sharing experimental or community adapter metadata.
 
 FlowSound validates bundle identifiers before saving. Invalid values are ignored and duplicates are removed. An empty watched list falls back to Safari and Telegram; an empty excluded list falls back to Apple Music, FlowSound, and common macOS notification services. The selected music app is always excluded from all-apps monitoring. Saving Preferences restarts the Core Audio process tap when FlowSound is active.
 

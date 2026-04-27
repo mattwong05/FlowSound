@@ -97,6 +97,14 @@
 - Keep the menu bar item icon-only.
 - Add recently detected audio sources to help users discover bundle identifiers for watched and excluded app rules.
 
+## 0.15.x Adapter Architecture
+
+- Add a `MusicControlAdapter` capability model for official, experimental, and community player integrations.
+- Keep Apple Music and Spotify on the official absolute-volume adapter path.
+- Add Netease Cloud Music as an experimental relative-step adapter using menu-state playback detection and Core Audio output feedback.
+- Add adapter profile import/export for transparent community adapter metadata.
+- Defer Adapter Lab UI until the adapter capability model and profile format are stable.
+
 ## 1.0.0 Release Candidate
 
 - Finalize signed and notarized distribution.

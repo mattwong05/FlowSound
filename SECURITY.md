@@ -54,7 +54,7 @@ Include:
 FlowSound should keep these boundaries explicit:
 
 - Core Audio process tap logic stays isolated from UI code.
-- Music app automation stays behind `MusicController`.
+- Music app automation stays behind `MusicControlAdapter`.
 - Permission failures should be visible to the user.
 - FlowSound should not resume the selected music app unless FlowSound paused it.
 - FlowSound should not add network behavior without documentation and review.

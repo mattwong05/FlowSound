@@ -54,7 +54,8 @@ Allowed commit types:
 - Keep known helper-process expansion explicit and documented.
 - Keep release packaging, signing, notarization, and checksum behavior documented.
 - Keep website deployment and multilingual landing page behavior documented.
-- Keep music app automation isolated from product state.
+- Keep music app automation isolated behind `MusicControlAdapter` capability boundaries.
+- Label adapter support levels explicitly; do not present experimental or community adapters as official support.
 - Treat permission failures as explicit states.
 - Avoid silent behavior changes.
 - Prefer unit-testable state machine logic.

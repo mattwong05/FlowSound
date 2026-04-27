@@ -17,4 +17,4 @@ Recommended custom domain:
 flowsound.youseminar.cn
 ```
 
-The page supports English and Simplified Chinese. It defaults to English unless the browser language starts with `zh`; users can switch manually. The product copy should stay aligned with the app's current support matrix: macOS 15+, Apple Music, Spotify, and local-first permission handling.
+The page supports English and Simplified Chinese. It defaults to English unless the browser language starts with `zh`; users can switch manually. The product copy should stay aligned with the app's current support matrix: macOS 15+, official Apple Music and Spotify support, experimental Netease Cloud Music support, and local-first permission handling.
