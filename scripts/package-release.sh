@@ -25,6 +25,14 @@ mkdir -p "$DIST_DIR"
 
 scripts/build-app.sh "$CONFIGURATION"
 
+BUNDLE_SHORT_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_DIR/Contents/Info.plist")"
+BUNDLE_BUILD_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_DIR/Contents/Info.plist")"
+
+if [[ "$BUNDLE_SHORT_VERSION" != "$VERSION" || "$BUNDLE_BUILD_VERSION" != "$VERSION" ]]; then
+    echo "Bundle version mismatch: VERSION=$VERSION, CFBundleShortVersionString=$BUNDLE_SHORT_VERSION, CFBundleVersion=$BUNDLE_BUILD_VERSION." >&2
+    exit 1
+fi
+
 if [[ -n "$SIGN_IDENTITY" ]]; then
     echo "Signing FlowSound.app with identity: $SIGN_IDENTITY"
     codesign --force --deep --timestamp --options runtime --sign "$SIGN_IDENTITY" "$APP_DIR"
@@ -66,7 +74,8 @@ awk -v version="$VERSION" '
 ' "$ROOT_DIR/CHANGELOG.md" > "$CHANGELOG_EXCERPT_PATH"
 
 if [[ ! -s "$CHANGELOG_EXCERPT_PATH" ]]; then
-    echo "- See CHANGELOG.md for release details." > "$CHANGELOG_EXCERPT_PATH"
+    echo "CHANGELOG.md does not contain a release section for $VERSION." >&2
+    exit 1
 fi
 
 sed "s/VERSION/$VERSION/g" "$RELEASE_NOTES_TEMPLATE" | while IFS= read -r line; do

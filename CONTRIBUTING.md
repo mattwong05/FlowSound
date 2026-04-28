@@ -57,6 +57,9 @@ Release builds are created with `scripts/package-release.sh`.
 Default behavior:
 
 - Builds `FlowSound.app` with SwiftPM release configuration.
+- Reads `VERSION` and injects it into the generated bundle `Info.plist`.
+- Fails if `CFBundleShortVersionString` or `CFBundleVersion` does not match `VERSION`.
+- Fails if `CHANGELOG.md` does not contain a matching release section.
 - Creates `dist/FlowSound-<version>.zip`.
 - Creates `dist/SHA256SUMS.txt`.
 - Creates `dist/RELEASE_NOTES.md` from `docs/RELEASE_NOTES_TEMPLATE.md` and the matching `CHANGELOG.md` version section.
@@ -155,6 +158,8 @@ Non-trivial changes must update:
 - `VERSION`
 - `CHANGELOG.md`
 - User-facing docs affected by the change
+
+Before publishing a GitHub Release, run `scripts/package-release.sh` from a clean tree and inspect the generated `dist/RELEASE_NOTES.md`. Do not publish or replace release assets if the app bundle metadata, archive name, changelog section, and release notes do not all refer to the same version.
 
 ## Commit Style
 

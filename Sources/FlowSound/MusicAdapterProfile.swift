@@ -91,7 +91,7 @@ final class MusicAdapterProfileStore {
             playbackStateCapability: .menuState,
             volumeControlCapability: .relativeStep,
             permissions: ["Automation", "Accessibility", "System Audio Capture"],
-            notes: "Uses the Controls menu for play/pause and relative volume steps. Uses Core Audio output feedback only to confirm fade-out silence."
+            notes: "Uses English or Simplified Chinese Controls menu titles for play/pause and relative volume steps. Uses Core Audio output feedback only to confirm fade-out silence."
         )
     ]
 }

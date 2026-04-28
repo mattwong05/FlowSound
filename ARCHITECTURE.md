@@ -70,7 +70,7 @@ Responsibilities:
 
 `AbsoluteVolumeMusicControlAdapter` is the stable path used by Apple Music and Spotify. It exposes native playback-state reads plus `0...100` volume reads and writes. Future experimental or community adapters can declare other capabilities, such as menu-derived playback state or relative-step volume control, without pretending that every player exposes a reliable absolute volume.
 
-Netease Cloud Music is wired as an experimental adapter. It reads playback state from the Controls menu (`Pause` means playing, `Play` means paused), fades out with relative volume-down menu commands until the app's Core Audio output probe reports sustained silence, pauses through the menu, and restores conservatively with fewer relative volume-up steps to avoid overshooting the user's previous loudness. The restore is approximate because Netease exposes relative menu steps, usually about 5%, rather than an exact readable volume.
+Netease Cloud Music is wired as an experimental adapter. It reads playback state from the Controls menu (`Pause` or `暂停` means playing, `Play` or `播放` means paused), fades out with relative volume-down menu commands until the app's Core Audio output probe reports sustained silence, pauses through the menu, and restores conservatively with fewer relative volume-up steps to avoid overshooting the user's previous loudness. The restore is approximate because Netease exposes relative menu steps, usually about 5%, rather than an exact readable volume.
 
 Adapter profiles are local JSON metadata that describe support level, bundle identifiers, capabilities, permissions, and notes. FlowSound can import and export profiles for review and sharing, but imported profiles are not executed as arbitrary scripts, do not download scripts, and do not require network access. This metadata-only format is intentionally not enough to add a brand-new controllable music app by itself; executable adapter behavior must still be implemented inside the trusted `MusicControlAdapter` boundary.
 
@@ -166,6 +166,9 @@ The app bundle icon uses the generated `.icns` file declared through `CFBundleIc
 Release packaging responsibilities:
 
 - Use `scripts/build-app.sh release` as the app bundle source.
+- Treat `VERSION` as the source of truth for app bundle version metadata.
+- Inject `VERSION` into the generated `Info.plist` before signing or archiving.
+- Fail release packaging if bundle metadata or changelog release notes do not match `VERSION`.
 - Keep unsigned development archives possible for testers.
 - Use Developer ID signing and notarization when release credentials are available.
 - Publish `FlowSound-<version>.zip` and `SHA256SUMS.txt`.

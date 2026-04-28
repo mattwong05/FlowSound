@@ -75,7 +75,7 @@ Final responses must end with proposed commit lines and the files included in ea
 - Keep monitoring mode behavior explicit in settings and docs.
 - Keep excluded bundle identifier behavior explicit in settings and docs.
 - Keep known helper-process expansion explicit and documented.
-- Keep release packaging, signing, notarization, and checksum behavior documented.
+- Keep release packaging, version metadata injection, changelog checks, signing, notarization, and checksum behavior documented.
 - Keep website deployment and multilingual landing page behavior documented.
 - Keep music app automation isolated behind a `MusicControlAdapter` boundary.
 - Keep adapter support levels explicit so experimental or community integrations are not presented as official support.

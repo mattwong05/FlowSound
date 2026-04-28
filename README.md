@@ -44,7 +44,7 @@ FlowSound is open source and designed to be local-first:
 
 FlowSound detects whether other apps are producing audio, then controls the selected music app locally through Apple Events or explicit adapter commands. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md) for details.
 
-Apple Music and Spotify are official supported music apps. Netease Cloud Music is experimental: it uses menu-state playback detection, relative volume steps, Accessibility permission, and Core Audio output feedback to confirm fade-out silence.
+Apple Music and Spotify are official supported music apps. Netease Cloud Music is experimental: it uses menu-state playback detection, relative volume steps, Accessibility permission, and Core Audio output feedback to confirm fade-out silence. Netease playback-state detection recognizes both English and Simplified Chinese Controls menu titles.
 
 Netease Cloud Music requires Accessibility permission because FlowSound must click the app's Controls menu through local macOS UI scripting. Its volume restore is approximate: Netease exposes relative volume menu steps, usually about 5%, and does not expose an exact readable volume through AppleScript.
 
@@ -153,12 +153,16 @@ scripts/build-app.sh
 open .build/FlowSound.app
 ```
 
+`scripts/build-app.sh` reads `VERSION` and injects it into the generated app bundle `Info.plist`, so the About window and Finder bundle metadata use the same release marker.
+
 Build a release archive and checksum:
 
 ```sh
 scripts/package-release.sh
 ls dist/
 ```
+
+Release packaging fails if the built bundle version does not match `VERSION` or if `CHANGELOG.md` does not contain a matching release section.
 
 Unsigned release archives are useful for development and testers. Public releases should be signed with a Developer ID Application certificate and notarized by Apple. A local `Apple Development` certificate is not enough for the normal public Gatekeeper experience.
 

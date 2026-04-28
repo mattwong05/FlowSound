@@ -33,6 +33,13 @@ import Testing
     #expect(NeteaseCloudMusicControlAdapter.restoreStepCount(forFadeOutSteps: 12) == 10)
 }
 
+@Test func neteasePlaybackStateSupportsEnglishAndChineseMenuTitles() {
+    #expect(NeteaseCloudMusicControlAdapter.playbackState(forMenuItemTitle: "Pause") == .playing)
+    #expect(NeteaseCloudMusicControlAdapter.playbackState(forMenuItemTitle: "暂停") == .playing)
+    #expect(NeteaseCloudMusicControlAdapter.playbackState(forMenuItemTitle: "Play") == .paused)
+    #expect(NeteaseCloudMusicControlAdapter.playbackState(forMenuItemTitle: "播放") == .paused)
+}
+
 @Test @MainActor func restoreVolumeIsPreservedWhenRestoreIsInterruptedByNewAudio() async throws {
     var settings = FlowSoundSettings.defaults
     settings.quietDuration = 0.05

@@ -14,6 +14,15 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.15.1] - 2026-04-28
+
+### Fixed
+
+- Fixed release app bundle metadata so `CFBundleShortVersionString`, `CFBundleVersion`, and the About window version are generated from `VERSION`.
+- Fixed release packaging to fail when the built app bundle version does not match `VERSION`.
+- Fixed release packaging to fail when `CHANGELOG.md` does not contain a matching release section instead of publishing placeholder release notes.
+- Fixed Netease Cloud Music playback-state detection for Chinese and English Controls menu titles.
+
 ## [0.15.0] - 2026-04-28
 
 ### Added

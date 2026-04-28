@@ -52,7 +52,7 @@ Allowed commit types:
 - Keep monitoring mode behavior explicit in settings and docs.
 - Keep excluded bundle identifier behavior explicit in settings and docs.
 - Keep known helper-process expansion explicit and documented.
-- Keep release packaging, signing, notarization, and checksum behavior documented.
+- Keep release packaging, version metadata injection, changelog checks, signing, notarization, and checksum behavior documented.
 - Keep website deployment and multilingual landing page behavior documented.
 - Keep music app automation isolated behind `MusicControlAdapter` capability boundaries.
 - Label adapter support levels explicitly; do not present experimental or community adapters as official support.

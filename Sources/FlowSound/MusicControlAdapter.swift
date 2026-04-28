@@ -265,14 +265,7 @@ struct NeteaseCloudMusicControlAdapter: MusicControlAdapter {
 
     func playbackState() async throws -> MusicPlaybackState {
         let title = try await menuItemTitle(MenuItem.playPause)
-        switch title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-        case "pause":
-            return .playing
-        case "play":
-            return .paused
-        default:
-            return .unknown(title)
-        }
+        return Self.playbackState(forMenuItemTitle: title)
     }
 
     func duck(settings: FlowSoundSettings) async throws -> MusicRestoreTarget? {
@@ -326,6 +319,18 @@ struct NeteaseCloudMusicControlAdapter: MusicControlAdapter {
 
     static func restoreStepCount(forFadeOutSteps steps: Int) -> Int {
         steps <= 2 ? steps : max(0, steps - 2)
+    }
+
+    static func playbackState(forMenuItemTitle title: String) -> MusicPlaybackState {
+        let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        switch normalizedTitle {
+        case "pause", "暂停":
+            return .playing
+        case "play", "播放":
+            return .paused
+        default:
+            return .unknown(title)
+        }
     }
 
     func play() async throws {
