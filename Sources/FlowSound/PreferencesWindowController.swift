@@ -9,47 +9,44 @@ private final class RecentSourceActionButton: NSButton {
 }
 
 @MainActor
-final class PreferencesWindowController {
+final class PreferencesWindowController: NSObject, NSToolbarDelegate, NSWindowDelegate, NSTextFieldDelegate, NSTextViewDelegate {
     private enum Layout {
-        static let width: CGFloat = 720
-        static let defaultHeight: CGFloat = 640
+        static let width: CGFloat = 820
+        static let defaultHeight: CGFloat = 450
         static let minimumHeight: CGFloat = 420
-        static let verticalChrome: CGFloat = 180
-        static let generalContentHeight: CGFloat = 560
-        static let monitoringContentHeight: CGFloat = 520
-        static let toolsContentHeight: CGFloat = 600
-        static let contentWidth: CGFloat = 640
-        static let labelWidth: CGFloat = 140
-        static let fieldWidth: CGFloat = 86
-        static let tabWidth: CGFloat = 116
+        static let contentWidth: CGFloat = 772
+        static let fieldWidth: CGFloat = 66
+        static let recentSourcesHeight: CGFloat = 186
     }
 
     private enum PreferencesTab: Int, CaseIterable {
-        case general
-        case monitoring
-        case tools
+        case general, monitoring, timing, tools
 
         var title: String {
             switch self {
-            case .general:
-                FlowSoundStrings.text(.generalTab)
-            case .monitoring:
-                FlowSoundStrings.text(.monitoringTab)
-            case .tools:
-                FlowSoundStrings.text(.toolsTab)
+            case .general: FlowSoundStrings.text(.generalTab)
+            case .monitoring: localized("Applications", "应用规则")
+            case .timing: localized("Sound", "声音调节")
+            case .tools: FlowSoundStrings.text(.toolsTab)
             }
         }
-
-        var preferredContentHeight: CGFloat {
+        var symbol: String {
             switch self {
-            case .general:
-                Layout.generalContentHeight
-            case .monitoring:
-                Layout.monitoringContentHeight
-            case .tools:
-                Layout.toolsContentHeight
+            case .general: "slider.horizontal.3"
+            case .monitoring: "app.badge.checkmark"
+            case .timing: "waveform"
+            case .tools: "wrench.and.screwdriver"
             }
         }
+        var contentHeight: CGFloat {
+            switch self {
+            case .general: 450
+            case .monitoring: 650
+            case .timing: 560
+            case .tools: 610
+            }
+        }
+        var identifier: NSToolbarItem.Identifier { .init("FlowSound.Settings.\(rawValue)") }
     }
 
     private typealias RecentSourceList = ApplicationRuleDraft.List
@@ -57,15 +54,19 @@ final class PreferencesWindowController {
     private let settingsStore: FlowSoundSettingsStore
     private let diagnosticsWindowController: StartupWindowController
     private var experimentalSection: NSView?
-    private let applicationRulesSummary = NSStackView()
+    private var watchedRulesColumn: ApplicationRuleColumn?
+    private var excludedRulesColumn: ApplicationRuleColumn?
+    private let fixedExclusionsLabel = NSTextField(wrappingLabelWithString: "")
+    private var timingSliders: [NSSlider] = []
+    private var profileSection: NSView?
+    private let footerStatus = NSTextField(labelWithString: "")
     private var advancedRulesSection: NSView?
     private var advancedRulesButton: NSButton?
     private var window: NSWindow?
     private var loadedLaunchAtLoginState: Bool?
     private var selectedTab: PreferencesTab = .general
-    private let tabControl = NSSegmentedControl()
+    private var preferencesToolbar: NSToolbar?
     private let contentContainer = NSView()
-    private var contentHeightConstraint: NSLayoutConstraint?
     private var tabContentViews: [PreferencesTab: NSView] = [:]
     private var fixedWidthViews: Set<ObjectIdentifier> = []
 
@@ -88,6 +89,7 @@ final class PreferencesWindowController {
     init(settingsStore: FlowSoundSettingsStore, service: FlowSoundService, activityMonitor: SimulatableAudioActivityMonitor) {
         self.settingsStore = settingsStore
         self.diagnosticsWindowController = StartupWindowController(service: service, activityMonitor: activityMonitor, settingsStore: settingsStore)
+        super.init()
     }
 
     func show() {
@@ -98,272 +100,237 @@ final class PreferencesWindowController {
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-
         resetReusableViewsForNewWindow()
-        let rootView = NSView()
-        configureTabControl()
-
-        let buttonRow = makeButtonRow()
-        tabControl.translatesAutoresizingMaskIntoConstraints = false
-        contentContainer.translatesAutoresizingMaskIntoConstraints = false
-        buttonRow.translatesAutoresizingMaskIntoConstraints = false
-        rootView.addSubview(tabControl)
-        rootView.addSubview(contentContainer)
-        rootView.addSubview(buttonRow)
-        contentHeightConstraint = contentContainer.heightAnchor.constraint(equalToConstant: selectedTab.preferredContentHeight)
-        contentHeightConstraint?.priority = .defaultHigh
-        contentHeightConstraint?.isActive = true
-
+        let root = NSView()
+        let footer = makeButtonRow()
+        let divider = separator()
+        for view in [contentContainer, footer, divider] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            root.addSubview(view)
+        }
         NSLayoutConstraint.activate([
-            tabControl.topAnchor.constraint(equalTo: rootView.topAnchor, constant: 18),
-            tabControl.centerXAnchor.constraint(equalTo: rootView.centerXAnchor),
-
-            contentContainer.topAnchor.constraint(equalTo: tabControl.bottomAnchor, constant: 16),
-            contentContainer.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 20),
-            contentContainer.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -20),
-
-            buttonRow.topAnchor.constraint(equalTo: contentContainer.bottomAnchor, constant: 14),
-            buttonRow.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 20),
-            buttonRow.trailingAnchor.constraint(lessThanOrEqualTo: rootView.trailingAnchor, constant: -20),
-            buttonRow.bottomAnchor.constraint(equalTo: rootView.bottomAnchor, constant: -18)
+            contentContainer.topAnchor.constraint(equalTo: root.topAnchor),
+            contentContainer.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 24),
+            contentContainer.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            contentContainer.bottomAnchor.constraint(equalTo: divider.topAnchor, constant: -12),
+            divider.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            divider.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            divider.bottomAnchor.constraint(equalTo: footer.topAnchor, constant: -16),
+            footer.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 24),
+            footer.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -24),
+            footer.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -16),
+            footer.heightAnchor.constraint(equalToConstant: 28)
         ])
-
         let preferencesWindow = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: Layout.width, height: Layout.defaultHeight),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
+            styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
         )
-        preferencesWindow.title = FlowSoundStrings.text(.preferencesTitle)
-        preferencesWindow.contentView = rootView
-        preferencesWindow.minSize = NSSize(width: Layout.width, height: Layout.minimumHeight)
-        preferencesWindow.center()
+        preferencesWindow.identifier = .init("FlowSound.Settings")
+        preferencesWindow.title = selectedTab.title
+        preferencesWindow.contentView = root
+        preferencesWindow.contentMinSize = NSSize(width: Layout.width, height: Layout.minimumHeight)
+        preferencesWindow.contentMaxSize = NSSize(width: Layout.width, height: 1200)
+        preferencesWindow.delegate = self
         preferencesWindow.isReleasedWhenClosed = false
+        let toolbar = NSToolbar(identifier: "FlowSound.Settings.Toolbar")
+        toolbar.delegate = self
+        toolbar.allowsUserCustomization = false
+        toolbar.autosavesConfiguration = false
+        toolbar.displayMode = .iconAndLabel
+        toolbar.selectedItemIdentifier = selectedTab.identifier
+        preferencesToolbar = toolbar
+        preferencesWindow.toolbar = toolbar
+        preferencesWindow.toolbarStyle = .preference
+        preferencesWindow.center()
         window = preferencesWindow
-
         PreferencesTab.allCases.forEach { _ = contentView(for: $0) }
         showSelectedTab(adjustWindow: false)
         populateFields()
         refreshRecentAudioSources()
-        adjustWindowHeightForSelectedTab()
+        if let screen = preferencesWindow.screen ?? NSScreen.main {
+            var frame = preferencesWindow.frame
+            frame.size.height = min(frame.height, screen.visibleFrame.height - 40)
+            frame.origin.y = min(frame.origin.y, screen.visibleFrame.maxY - frame.height)
+            preferencesWindow.setFrame(frame, display: true)
+        }
         preferencesWindow.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        refreshTabDocumentHeights()
     }
 
-    private func configureTabControl() {
-        tabControl.segmentCount = PreferencesTab.allCases.count
-        tabControl.trackingMode = .selectOne
-        tabControl.target = self
-        tabControl.action = #selector(tabChanged)
-
-        for tab in PreferencesTab.allCases {
-            tabControl.setLabel(tab.title, forSegment: tab.rawValue)
-            tabControl.setWidth(Layout.tabWidth, forSegment: tab.rawValue)
-        }
-        tabControl.selectedSegment = selectedTab.rawValue
+    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        PreferencesTab.allCases.map(\.identifier)
     }
-
-    @objc private func tabChanged() {
-        guard let tab = PreferencesTab(rawValue: tabControl.selectedSegment) else {
-            return
-        }
+    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        toolbarDefaultItemIdentifiers(toolbar)
+    }
+    func toolbarSelectableItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        toolbarDefaultItemIdentifiers(toolbar)
+    }
+    func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier identifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
+        guard let tab = PreferencesTab.allCases.first(where: { $0.identifier == identifier }) else { return nil }
+        let item = NSToolbarItem(itemIdentifier: identifier)
+        item.label = tab.title
+        item.paletteLabel = tab.title
+        item.image = NSImage(systemSymbolName: tab.symbol, accessibilityDescription: tab.title)
+        item.tag = tab.rawValue
+        item.target = self
+        item.action = #selector(tabChanged(_:))
+        return item
+    }
+    @objc private func tabChanged(_ sender: NSToolbarItem) {
+        guard let tab = PreferencesTab(rawValue: sender.tag) else { return }
         selectedTab = tab
         refreshApplicationRulesSummary()
         showSelectedTab(adjustWindow: true)
         refreshRecentAudioSources()
     }
-
     private func showSelectedTab(adjustWindow: Bool) {
-        for (tab, view) in tabContentViews {
-            view.isHidden = tab != selectedTab
-        }
-
-        if adjustWindow {
-            adjustWindowHeightForSelectedTab()
-        }
+        for (tab, view) in tabContentViews { view.isHidden = tab != selectedTab }
+        window?.title = selectedTab.title
+        preferencesToolbar?.selectedItemIdentifier = selectedTab.identifier
+        if adjustWindow { resizeWindowForPane() }
+        refreshTabDocumentHeights()
+    }
+    func windowDidResize(_ notification: Notification) { refreshTabDocumentHeights() }
+    private func resizeWindowForPane() {
+        guard let window else { return }
+        let height = selectedTab.contentHeight + (selectedTab == .general && selectedMusicPlayer() == .neteaseCloudMusic ? 110 : 0)
+        let size = NSSize(width: Layout.width, height: height)
+        var frame = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))
+        let available = (window.screen ?? NSScreen.main)?.visibleFrame
+        frame.size.height = min(frame.height, (available?.height ?? frame.height + 40) - 40)
+        frame.origin.x = window.frame.origin.x
+        frame.origin.y = window.frame.maxY - frame.height
+        if let available { frame.origin.y = max(available.minY, frame.origin.y) }
+        window.setFrame(frame, display: true)
     }
 
     private func contentView(for tab: PreferencesTab) -> NSView {
-        if let view = tabContentViews[tab] {
-            return view
-        }
-
-        let view: NSView
+        if let view = tabContentViews[tab] { return view }
+        let content: NSView
         switch tab {
-        case .general:
-            view = makeTabScrollView(makeGeneralTab(), height: tab.preferredContentHeight)
-        case .monitoring:
-            view = makeTabScrollView(makeMonitoringTab(), height: tab.preferredContentHeight)
-        case .tools:
-            view = makeTabScrollView(makeToolsTab(), height: tab.preferredContentHeight)
+        case .general: content = makeGeneralTab()
+        case .monitoring: content = makeMonitoringTab()
+        case .timing: content = makeTimingTab()
+        case .tools: content = makeToolsTab()
         }
-        view.translatesAutoresizingMaskIntoConstraints = false
-        contentContainer.addSubview(view)
-        NSLayoutConstraint.activate([
-            view.topAnchor.constraint(equalTo: contentContainer.topAnchor),
-            view.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
-            view.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
-            view.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor)
-        ])
-        view.isHidden = tab != selectedTab
-        tabContentViews[tab] = view
-        return view
-    }
-
-    private func makeTabScrollView(_ content: NSView, height: CGFloat) -> NSScrollView {
-        let scrollView = NSScrollView()
-        scrollView.hasVerticalScroller = true
-        scrollView.drawsBackground = false
-        scrollView.borderType = .noBorder
-
-        let documentView = FlippedDocumentView(frame: NSRect(x: 0, y: 0, width: Layout.contentWidth, height: height))
+        let scroll = NSScrollView()
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.drawsBackground = false
+        scroll.borderType = .noBorder
+        let document = FlippedDocumentView()
         content.translatesAutoresizingMaskIntoConstraints = false
-        documentView.addSubview(content)
-        scrollView.documentView = documentView
-
+        document.addSubview(content)
         NSLayoutConstraint.activate([
-            content.topAnchor.constraint(equalTo: documentView.topAnchor, constant: 2),
-            content.leadingAnchor.constraint(equalTo: documentView.leadingAnchor),
-            content.trailingAnchor.constraint(equalTo: documentView.trailingAnchor),
+            content.topAnchor.constraint(equalTo: document.topAnchor, constant: 22),
+            content.leadingAnchor.constraint(equalTo: document.leadingAnchor),
             content.widthAnchor.constraint(equalToConstant: Layout.contentWidth)
         ])
-
-        documentView.setFrameSize(NSSize(width: Layout.contentWidth, height: max(height, content.fittingSize.height + 4)))
-        return scrollView
+        scroll.documentView = document
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        contentContainer.addSubview(scroll)
+        NSLayoutConstraint.activate([
+            scroll.topAnchor.constraint(equalTo: contentContainer.topAnchor),
+            scroll.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+            scroll.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+            scroll.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor)
+        ])
+        scroll.isHidden = tab != selectedTab
+        tabContentViews[tab] = scroll
+        return scroll
     }
-
     private func refreshTabDocumentHeights() {
-        for (tab, view) in tabContentViews {
-            guard let scrollView = view as? NSScrollView,
-                  let document = scrollView.documentView,
+        for view in tabContentViews.values {
+            guard let scroll = view as? NSScrollView, let document = scroll.documentView,
                   let content = document.subviews.first else { continue }
             content.layoutSubtreeIfNeeded()
-            document.setFrameSize(NSSize(width: Layout.contentWidth, height: max(tab.preferredContentHeight, content.fittingSize.height + 4)))
+            document.setFrameSize(NSSize(width: Layout.contentWidth, height: max(scroll.contentSize.height, content.fittingSize.height + 44)))
         }
-    }
-
-    private func adjustWindowHeightForSelectedTab() {
-        guard let window else {
-            return
-        }
-
-        let visibleContentHeight = selectedTab.preferredContentHeight
-        let targetContentHeight = Layout.verticalChrome + visibleContentHeight
-        let screenHeight = window.screen?.visibleFrame.height ?? NSScreen.main?.visibleFrame.height ?? targetContentHeight
-        let cappedContentHeight = min(targetContentHeight, screenHeight - 80)
-
-        var frame = window.frame
-        let newHeight = max(Layout.minimumHeight, cappedContentHeight)
-        let delta = newHeight - frame.height
-        frame.origin.y -= delta
-        frame.size.height = newHeight
-        contentHeightConstraint?.constant = max(180, window.contentRect(forFrameRect: frame).height - Layout.verticalChrome)
-        window.setFrame(frame, display: true, animate: false)
-        refreshTabDocumentHeights()
     }
 
     private func makeGeneralTab() -> NSStackView {
         let content = makeTabStack()
-        content.addArrangedSubview(makeSection(
-            title: FlowSoundStrings.text(.generalTab),
-            help: FlowSoundStrings.text(.languageHelp),
-            rows: [
-                makeLanguageRow(),
-                makeMusicPlayerRow()
-            ]
-        ))
-        let experimentalSection = makeSection(
-            title: FlowSoundStrings.text(.experimentalAdapters),
-            help: "\(FlowSoundStrings.text(.neteaseAccessHelp))\n\(FlowSoundStrings.text(.neteaseVolumeHelp))",
-            rows: [makeAccessibilitySettingsRow()]
-        )
-        self.experimentalSection = experimentalSection
-        content.addArrangedSubview(experimentalSection)
-        content.addArrangedSubview(makeSection(
-            title: FlowSoundStrings.text(.timing),
-            help: FlowSoundStrings.text(.timingHelp),
-            rows: [
-                formRow(FlowSoundStrings.text(.activeThreshold), activeThresholdField, FlowSoundStrings.text(.activeThresholdHelp)),
-                formRow(FlowSoundStrings.text(.activeDuration), activeDurationField, FlowSoundStrings.text(.activeDurationHelp)),
-                formRow(FlowSoundStrings.text(.quietDuration), quietDurationField, FlowSoundStrings.text(.quietDurationHelp)),
-                formRow(FlowSoundStrings.text(.fadeOut), fadeOutDurationField, FlowSoundStrings.text(.fadeOutHelp)),
-                formRow(FlowSoundStrings.text(.fadeIn), fadeInDurationField, FlowSoundStrings.text(.fadeInHelp))
-            ]
-        ))
-        content.addArrangedSubview(makeLaunchSection())
+        content.addArrangedSubview(pageHeading(localized("Music & system", "音乐与系统"),
+            localized("FlowSound gently pauses your music when another app needs your attention.", "其他应用发声时，FlowSound 会轻柔地暂停音乐。")))
+        content.addArrangedSubview(makeSection(title: localized("Music", "音乐"), help: "", rows: [makeMusicPlayerRow()]))
+        let experimental = makeSection(title: localized("Experimental integration", "实验性支持"),
+            help: localized("Netease needs Accessibility access. Volume restoration is approximate.", "网易云音乐需要辅助功能权限，恢复音量可能略有偏差。"),
+            rows: [makeAccessibilitySettingsRow()])
+        experimentalSection = experimental
+        content.addArrangedSubview(experimental)
+        content.addArrangedSubview(makeSection(title: localized("System", "系统"), help: "", rows: [makeLanguageRow(), makeLaunchSection()]))
         return content
     }
 
     private func makeMonitoringTab() -> NSStackView {
         let content = makeTabStack()
-        content.addArrangedSubview(makeSection(
-            title: FlowSoundStrings.text(.audioMonitoring),
-            help: FlowSoundStrings.text(.audioMonitoringHelp),
-            rows: [makeMonitoringModeRow()]
-        ))
-        let addButtons = NSStackView(views: [
-            NSButton(title: FlowSoundStrings.text(.chooseWatchedApplications), target: self, action: #selector(chooseWatchedApplications)),
-            NSButton(title: FlowSoundStrings.text(.chooseExcludedApplications), target: self, action: #selector(chooseExcludedApplications))
-        ])
-        addButtons.spacing = 10
-        applicationRulesSummary.orientation = .vertical
-        applicationRulesSummary.alignment = .leading
-        applicationRulesSummary.spacing = 6
-        let summaryScroll = NSScrollView()
-        summaryScroll.hasVerticalScroller = true
-        summaryScroll.autohidesScrollers = false
-        summaryScroll.borderType = .bezelBorder
-        summaryScroll.drawsBackground = false
-        let summaryDocument = FlippedDocumentView()
-        summaryDocument.addSubview(applicationRulesSummary)
-        summaryScroll.documentView = summaryDocument
-        summaryScroll.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
-        summaryScroll.heightAnchor.constraint(equalToConstant: 160).isActive = true
-        content.addArrangedSubview(makeSection(
-            title: FlowSoundStrings.text(.watchedApps) + " / " + FlowSoundStrings.text(.excludedApps),
-            help: "\(FlowSoundStrings.text(.applicationRulesHelp))\n\(FlowSoundStrings.text(.fixedExclusionsHelp))",
-            rows: [addButtons, summaryScroll]
-        ))
-        let toggle = NSButton(title: FlowSoundStrings.text(.advancedToggleShow), target: self, action: #selector(toggleAdvancedRules))
+        content.addArrangedSubview(pageHeading(localized("Application rules", "应用规则"),
+            localized("Ignored apps never interrupt your music.", "被忽略的应用不会打断音乐。")))
+        content.addArrangedSubview(makeSection(title: "", help: "", rows: [makeMonitoringModeRow()]))
+        let watched = ApplicationRuleColumn(title: localized("Watched apps", "监听的应用"),
+            emptyText: localized("Add the apps you want to listen for.", "添加需要监听的应用。"),
+            accessibilityIdentifierPrefix: "watchedRules",
+            onAdd: { [weak self] in self?.chooseWatchedApplications() },
+            onRemove: { [weak self] in self?.removeApplicationFromDraft($0, from: .watched) })
+        let excluded = ApplicationRuleColumn(title: localized("Ignored apps", "忽略的应用"),
+            emptyText: localized("All other apps can interrupt your music.", "其他应用发声时均可打断音乐。"),
+            accessibilityIdentifierPrefix: "excludedRules",
+            onAdd: { [weak self] in self?.chooseExcludedApplications() },
+            onRemove: { [weak self] in self?.removeApplicationFromDraft($0, from: .excluded) })
+        watchedRulesColumn = watched
+        excludedRulesColumn = excluded
+        let columns = NSStackView(views: [watched, excluded])
+        columns.spacing = 16
+        columns.distribution = .fillEqually
+        columns.alignment = .top
+        columns.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
+        content.addArrangedSubview(columns)
+        fixedExclusionsLabel.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
+        fixedExclusionsLabel.font = .systemFont(ofSize: 11)
+        fixedExclusionsLabel.textColor = .secondaryLabelColor
+        content.addArrangedSubview(fixedExclusionsLabel)
+        let toggle = disclosure(localized("Advanced rules", "高级规则"), action: #selector(toggleAdvancedRules))
         advancedRulesButton = toggle
         content.addArrangedSubview(toggle)
-        let advanced = makeSection(
-            title: FlowSoundStrings.text(.advanced),
-            help: FlowSoundStrings.text(.watchedAndExcludedHelp),
-            rows: [
-                makeBundleIdentifierEditor(title: FlowSoundStrings.text(.watchedApps), help: FlowSoundStrings.text(.watchedAppsHelp), textView: watchedBundleIdentifiersTextView, height: 100),
-                makeBundleIdentifierEditor(title: FlowSoundStrings.text(.excludedApps), help: FlowSoundStrings.text(.excludedAppsHelp), textView: excludedBundleIdentifiersTextView, height: 100)
-            ]
-        )
+        let advanced = makeSection(title: "", help: localized("One bundle identifier per line. Ignore rules take priority.", "每行一个 Bundle ID；忽略规则优先。"), rows: [
+            makeBundleIdentifierEditor(title: localized("Watched apps", "监听的应用"), help: "", textView: watchedBundleIdentifiersTextView, height: 96),
+            makeBundleIdentifierEditor(title: localized("Ignored apps", "忽略的应用"), help: "", textView: excludedBundleIdentifiersTextView, height: 96)
+        ])
         advanced.isHidden = true
         advancedRulesSection = advanced
         content.addArrangedSubview(advanced)
         return content
     }
 
+    private func makeTimingTab() -> NSStackView {
+        let content = makeTabStack()
+        content.addArrangedSubview(pageHeading(localized("Sound & timing", "声音调节"),
+            localized("Tune how quickly music makes way, and when it comes back.", "调整音乐淡出、等待和恢复的节奏。")))
+        content.addArrangedSubview(makeSection(title: localized("Music transitions", "音乐过渡"), help: "", rows: [
+            timingRow(localized("Fade out", "淡出时长"), detail: localized("Ease music down before pausing.", "暂停前，逐渐降低音量。"), field: fadeOutDurationField, range: 0.1...30),
+            timingRow(localized("Resume after silence", "安静多久后恢复"), detail: localized("Wait for other apps to stay quiet.", "其他应用持续安静后再恢复。"), field: quietDurationField, range: 0.1...60),
+            timingRow(localized("Fade in", "淡入时长"), detail: localized("Return to the previous volume smoothly.", "平滑恢复到原来的音量。"), field: fadeInDurationField, range: 0.1...30)
+        ]))
+        content.addArrangedSubview(makeSection(title: localized("Detection", "声音检测"), help: "", rows: [
+            timingRow(localized("Minimum sound duration", "最短触发时长"), detail: localized("Skip sounds shorter than this.", "忽略短于此时长的声音。"), field: activeDurationField, range: 0.1...10),
+            numericRow(localized("Activity threshold", "触发阈值"), field: activeThresholdField, detail: localized("Lower values respond to quieter audio. Default: 0.02.", "数值越低，越容易响应轻微声音。默认 0.02。"))
+        ]))
+        return content
+    }
+
     private func makeToolsTab() -> NSStackView {
         let content = makeTabStack()
-        content.addArrangedSubview(makeSection(
-            title: FlowSoundStrings.text(.recentAudioSources),
-            help: FlowSoundStrings.text(.recentAudioSourcesHelp),
-            rows: [
-                makeRecentSourcesHeader(),
-                makeRecentSourcesList()
-            ]
-        ))
-        content.addArrangedSubview(makeSection(
-            title: FlowSoundStrings.text(.toolsDiagnostics),
-            help: FlowSoundStrings.text(.toolsDiagnosticsHelp),
-            rows: [makeDiagnosticsRow()]
-        ))
-        content.addArrangedSubview(makeSection(
-            title: FlowSoundStrings.text(.adapterProfiles),
-            help: FlowSoundStrings.text(.adapterProfilesHelp),
-            rows: [
-                makeAdapterProfileActionsRow(),
-                makeAdapterProfilesList()
-            ]
-        ))
+        content.addArrangedSubview(pageHeading(localized("Tools", "工具"),
+            localized("Review recent audio sources or check how FlowSound is working.", "查看最近发声的应用，或检查 FlowSound 的运行状态。")))
+        content.addArrangedSubview(makeSection(title: localized("Recent audio sources", "最近发声的应用"), help: "", rows: [makeRecentSourcesHeader(), makeRecentSourcesList()]))
+        content.addArrangedSubview(makeSection(title: localized("Diagnostics", "诊断"), help: "", rows: [makeDiagnosticsRow()]))
+        content.addArrangedSubview(disclosure(localized("Community adapters", "社区适配器"), action: #selector(toggleProfiles(_:))))
+        let profiles = makeSection(title: "", help: FlowSoundStrings.text(.adapterProfilesHelp), rows: [makeAdapterProfileActionsRow(), makeAdapterProfilesList()])
+        profiles.isHidden = true
+        profileSection = profiles
+        content.addArrangedSubview(profiles)
         return content
     }
 
@@ -371,229 +338,306 @@ final class PreferencesWindowController {
         let stack = NSStackView()
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 18
+        stack.spacing = 20
         return stack
     }
-
+    private func pageHeading(_ title: String, _ detail: String) -> NSStackView {
+        let stack = NSStackView()
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 6
+        let heading = NSTextField(labelWithString: title)
+        heading.font = .systemFont(ofSize: 20, weight: .semibold)
+        let subtitle = NSTextField(wrappingLabelWithString: detail)
+        subtitle.font = .systemFont(ofSize: 12)
+        subtitle.textColor = .secondaryLabelColor
+        stack.addArrangedSubview(heading)
+        stack.addArrangedSubview(subtitle)
+        stack.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
+        return stack
+    }
     private func makeLanguageRow() -> NSStackView {
         languagePopup.removeAllItems()
         for preference in FlowSoundLanguagePreference.allCases {
             languagePopup.addItem(withTitle: preference.label)
             languagePopup.lastItem?.representedObject = preference.rawValue
         }
+        languagePopup.target = self
+        languagePopup.action = #selector(settingsControlChanged)
         setFixedWidth(220, for: languagePopup)
         return controlRow(FlowSoundStrings.text(.language), languagePopup)
     }
-
     private func makeMusicPlayerRow() -> NSStackView {
         musicPlayerPopup.removeAllItems()
         for player in ControlledMusicPlayer.allCases {
-            let title = player.supportLevel == .official ? player.displayName : "\(player.displayName) - \(player.supportLevel.rawValue)"
-            musicPlayerPopup.addItem(withTitle: title)
+            musicPlayerPopup.addItem(withTitle: player.supportLevel == .official ? player.displayName : "\(player.displayName) · \(localized("Experimental", "实验性"))")
             musicPlayerPopup.lastItem?.representedObject = player.rawValue
         }
         musicPlayerPopup.target = self
         musicPlayerPopup.action = #selector(musicPlayerChanged)
-        setFixedWidth(300, for: musicPlayerPopup)
+        setFixedWidth(270, for: musicPlayerPopup)
         return controlRow(FlowSoundStrings.text(.musicPlayer), musicPlayerPopup)
     }
-
     private func makeMonitoringModeRow() -> NSStackView {
         monitoringModePopup.removeAllItems()
         for mode in AudioMonitoringMode.allCases {
-            monitoringModePopup.addItem(withTitle: mode.label)
+            monitoringModePopup.addItem(withTitle: mode == .allNonMusic ? localized("All apps, except ignored", "除忽略项外的所有应用") : localized("Only watched apps", "仅监听指定应用"))
             monitoringModePopup.lastItem?.representedObject = mode.rawValue
         }
         monitoringModePopup.target = self
         monitoringModePopup.action = #selector(monitoringModeChanged)
-        setFixedWidth(220, for: monitoringModePopup)
-        return controlRow(FlowSoundStrings.text(.audioMonitoring), monitoringModePopup)
+        setFixedWidth(260, for: monitoringModePopup)
+        return controlRow(localized("Listen for", "监听范围"), monitoringModePopup)
     }
-
     private func makeLaunchSection() -> NSStackView {
-        let section = NSStackView()
-        section.orientation = .vertical
-        section.alignment = .leading
-        section.spacing = 8
-
-        let titleView = NSTextField(labelWithString: FlowSoundStrings.text(.launchAtLogin))
-        titleView.font = .systemFont(ofSize: 13, weight: .semibold)
-        section.addArrangedSubview(titleView)
-
         launchAtLoginCheckbox.target = self
+        launchAtLoginCheckbox.action = #selector(settingsControlChanged)
+        loginItemStatusLabel.font = .systemFont(ofSize: 11)
         loginItemStatusLabel.textColor = .secondaryLabelColor
-        loginItemStatusLabel.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
-        section.addArrangedSubview(launchAtLoginCheckbox)
-        section.addArrangedSubview(loginItemStatusLabel)
-        return section
+        let text = NSStackView(views: [launchAtLoginCheckbox, loginItemStatusLabel])
+        text.orientation = .vertical
+        text.alignment = .leading
+        text.spacing = 5
+        let open = NSButton(title: localized("Login Items…", "登录项设置…"), target: self, action: #selector(openLoginItems))
+        open.controlSize = .small
+        return flexibleRow(text, open)
     }
-
     private func makeSection(title: String, help: String, rows: [NSView]) -> NSStackView {
         let section = NSStackView()
         section.orientation = .vertical
         section.alignment = .leading
         section.spacing = 8
-
-        let titleView = NSTextField(labelWithString: title)
-        titleView.font = .systemFont(ofSize: 13, weight: .semibold)
-        section.addArrangedSubview(titleView)
-
-        let helpView = NSTextField(wrappingLabelWithString: help)
-        helpView.textColor = .secondaryLabelColor
-        helpView.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
-        section.addArrangedSubview(helpView)
-
-        for row in rows {
-            section.addArrangedSubview(row)
+        section.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
+        if !title.isEmpty {
+            let heading = NSTextField(labelWithString: title)
+            heading.font = .systemFont(ofSize: 13, weight: .semibold)
+            section.addArrangedSubview(heading)
         }
+        let inner = NSStackView()
+        inner.orientation = .vertical
+        inner.alignment = .leading
+        inner.spacing = 12
+        for (index, row) in rows.enumerated() {
+            if index > 0 {
+                let line = separator()
+                inner.addArrangedSubview(line)
+                line.widthAnchor.constraint(equalTo: inner.widthAnchor).isActive = true
+            }
+            inner.addArrangedSubview(row)
+            row.widthAnchor.constraint(equalTo: inner.widthAnchor).isActive = true
+        }
+        if !help.isEmpty {
+            let note = NSTextField(wrappingLabelWithString: help)
+            note.textColor = .secondaryLabelColor
+            note.font = .systemFont(ofSize: 11)
+            inner.addArrangedSubview(note)
+            note.widthAnchor.constraint(equalTo: inner.widthAnchor).isActive = true
+        }
+        let box = NSBox()
+        box.boxType = .custom
+        box.borderWidth = 0.5
+        box.borderColor = .separatorColor
+        box.fillColor = .controlBackgroundColor
+        box.cornerRadius = 10
+        box.titlePosition = .noTitle
+        box.contentViewMargins = NSSize(width: 16, height: 14)
+        inner.translatesAutoresizingMaskIntoConstraints = false
+        box.contentView = inner
+        section.addArrangedSubview(box)
+        NSLayoutConstraint.activate([
+            box.widthAnchor.constraint(equalTo: section.widthAnchor),
+            box.heightAnchor.constraint(equalTo: inner.heightAnchor, constant: 28),
+            inner.widthAnchor.constraint(equalTo: box.widthAnchor, constant: -32)
+        ])
         return section
     }
-
+    private func separator() -> NSBox {
+        let line = NSBox()
+        line.boxType = .separator
+        line.heightAnchor.constraint(equalToConstant: 1).isActive = true
+        return line
+    }
+    private func disclosure(_ title: String, action: Selector) -> NSButton {
+        let button = NSButton(title: title, target: self, action: action)
+        button.setButtonType(.pushOnPushOff)
+        button.bezelStyle = .inline
+        button.isBordered = false
+        button.font = .systemFont(ofSize: 12)
+        button.image = NSImage(systemSymbolName: "chevron.right", accessibilityDescription: nil)
+        button.alternateImage = NSImage(systemSymbolName: "chevron.down", accessibilityDescription: nil)
+        button.alternateTitle = title
+        button.symbolConfiguration = .init(pointSize: 9, weight: .semibold)
+        button.imagePosition = .imageLeading
+        (button.cell as? NSButtonCell)?.showsStateBy = .contentsCellMask
+        button.setAccessibilityLabel(title)
+        return button
+    }
     private func makeBundleIdentifierEditor(title: String, help: String, textView: NSTextView, height: CGFloat) -> NSStackView {
-        let section = NSStackView()
-        section.orientation = .vertical
-        section.alignment = .leading
-        section.spacing = 6
-
+        let stack = NSStackView()
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 6
         let label = NSTextField(labelWithString: title)
         label.font = .systemFont(ofSize: 12, weight: .medium)
-        section.addArrangedSubview(label)
-
-        let helpView = NSTextField(wrappingLabelWithString: help)
-        helpView.textColor = .secondaryLabelColor
-        helpView.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
-        section.addArrangedSubview(helpView)
-
+        stack.addArrangedSubview(label)
         configureBundleIdentifierTextView(textView)
-
-        let scrollView = NSScrollView()
-        scrollView.borderType = .bezelBorder
-        scrollView.hasVerticalScroller = true
-        scrollView.documentView = textView
-        scrollView.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
-        scrollView.heightAnchor.constraint(equalToConstant: height).isActive = true
-        section.addArrangedSubview(scrollView)
-        return section
+        textView.delegate = self
+        textView.setAccessibilityLabel(title)
+        let scroll = NSScrollView()
+        scroll.borderType = .bezelBorder
+        scroll.hasVerticalScroller = true
+        scroll.documentView = textView
+        scroll.heightAnchor.constraint(equalToConstant: height).isActive = true
+        stack.addArrangedSubview(scroll)
+        scroll.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        return stack
     }
-
     private func makeRecentSourcesHeader() -> NSStackView {
-        let row = NSStackView()
-        row.orientation = .horizontal
-        row.alignment = .centerY
-        row.spacing = 10
-        let refreshButton = NSButton(title: FlowSoundStrings.text(.refresh), target: self, action: #selector(refreshRecentAudioSources))
-        row.addArrangedSubview(refreshButton)
-        return row
+        let note = NSTextField(labelWithString: localized("Seen in the last 3 minutes", "最近 3 分钟内"))
+        note.font = .systemFont(ofSize: 11)
+        note.textColor = .secondaryLabelColor
+        let refresh = NSButton(title: FlowSoundStrings.text(.refresh), target: self, action: #selector(refreshRecentAudioSources))
+        refresh.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: nil)
+        refresh.imagePosition = .imageLeading
+        refresh.controlSize = .small
+        return flexibleRow(note, refresh)
     }
-
     private func makeRecentSourcesList() -> NSScrollView {
         recentSourcesStack.orientation = .vertical
         recentSourcesStack.alignment = .leading
-        recentSourcesStack.spacing = 8
+        recentSourcesStack.spacing = 0
         recentSourcesStack.translatesAutoresizingMaskIntoConstraints = true
         recentSourcesStack.autoresizingMask = [.width]
-        recentSourcesStack.frame = NSRect(x: 10, y: 10, width: Layout.contentWidth - 20, height: 230)
-
         recentSourcesDocumentView.subviews.forEach { $0.removeFromSuperview() }
-        recentSourcesDocumentView.frame = NSRect(x: 0, y: 0, width: Layout.contentWidth, height: 250)
         recentSourcesDocumentView.addSubview(recentSourcesStack)
-
-        let scrollView = NSScrollView()
-        scrollView.borderType = .bezelBorder
-        scrollView.hasVerticalScroller = true
-        scrollView.documentView = recentSourcesDocumentView
-        scrollView.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
-        scrollView.heightAnchor.constraint(equalToConstant: 250).isActive = true
-
-        return scrollView
+        let scroll = NSScrollView()
+        scroll.borderType = .noBorder
+        scroll.drawsBackground = false
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.documentView = recentSourcesDocumentView
+        scroll.heightAnchor.constraint(equalToConstant: Layout.recentSourcesHeight).isActive = true
+        return scroll
     }
-
     private func makeDiagnosticsRow() -> NSStackView {
-        let row = NSStackView()
-        row.orientation = .horizontal
-        row.spacing = 10
-        row.addArrangedSubview(NSButton(title: FlowSoundStrings.text(.menuShowDiagnostics), target: self, action: #selector(showDiagnostics)))
-        row.addArrangedSubview(NSButton(title: FlowSoundStrings.text(.menuCopyDiagnostics), target: self, action: #selector(copyDiagnosticsPath)))
-        return row
+        let note = NSTextField(wrappingLabelWithString: localized("Monitoring, permissions and playback status.", "监听、权限和播放状态。"))
+        note.font = .systemFont(ofSize: 12)
+        note.textColor = .secondaryLabelColor
+        return flexibleRow(note, NSButton(title: localized("Open Diagnostics…", "打开诊断…"), target: self, action: #selector(showDiagnostics)))
     }
-
     private func makeAdapterProfileActionsRow() -> NSStackView {
-        let row = NSStackView()
-        row.orientation = .horizontal
-        row.spacing = 10
-        row.addArrangedSubview(NSButton(title: FlowSoundStrings.text(.importAdapterProfile), target: self, action: #selector(importAdapterProfile)))
-        row.addArrangedSubview(NSButton(title: FlowSoundStrings.text(.exportBundledAdapterProfile), target: self, action: #selector(exportNeteaseAdapterProfile)))
+        let row = NSStackView(views: [NSButton(title: FlowSoundStrings.text(.importAdapterProfile), target: self, action: #selector(importAdapterProfile)), NSButton(title: FlowSoundStrings.text(.exportBundledAdapterProfile), target: self, action: #selector(exportNeteaseAdapterProfile))])
+        row.spacing = 8
         return row
     }
-
     private func makeAccessibilitySettingsRow() -> NSStackView {
-        let row = NSStackView()
-        row.orientation = .horizontal
-        row.spacing = 10
-        row.addArrangedSubview(NSButton(title: FlowSoundStrings.text(.openAccessibilitySettings), target: self, action: #selector(openAccessibilitySettings)))
-        return row
+        NSStackView(views: [NSButton(title: FlowSoundStrings.text(.openAccessibilitySettings), target: self, action: #selector(openAccessibilitySettings))])
     }
-
     private func makeAdapterProfilesList() -> NSStackView {
         adapterProfilesStack.orientation = .vertical
         adapterProfilesStack.alignment = .leading
-        adapterProfilesStack.spacing = 6
+        adapterProfilesStack.spacing = 8
         refreshAdapterProfiles()
         return adapterProfilesStack
     }
-
     private func makeButtonRow() -> NSStackView {
-        let container = NSStackView()
-        container.orientation = .vertical
-        container.alignment = .leading
-        container.spacing = 8
-        let help = NSTextField(wrappingLabelWithString: FlowSoundStrings.text(.draftSettingsHelp))
-        help.textColor = .secondaryLabelColor
-        help.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
-        container.addArrangedSubview(help)
-        let row = NSStackView()
-        row.orientation = .horizontal
-        row.spacing = 10
-        row.addArrangedSubview(NSButton(title: FlowSoundStrings.text(.resetDefaults), target: self, action: #selector(resetDefaults)))
-        row.addArrangedSubview(NSButton(title: FlowSoundStrings.text(.openLoginItems), target: self, action: #selector(openLoginItems)))
-        let saveButton = NSButton(title: FlowSoundStrings.text(.save), target: self, action: #selector(save))
-        saveButton.keyEquivalent = "\r"
-        row.addArrangedSubview(saveButton)
-        row.addArrangedSubview(NSButton(title: FlowSoundStrings.text(.cancel), target: self, action: #selector(cancel)))
-        container.addArrangedSubview(row)
-        return container
-    }
-
-    private func controlRow(_ label: String, _ control: NSView) -> NSStackView {
-        let row = NSStackView()
-        row.orientation = .horizontal
+        let reset = NSButton(title: localized("Restore Defaults", "恢复默认"), target: self, action: #selector(resetDefaults))
+        reset.controlSize = .small
+        reset.identifier = .init("settings.reset")
+        footerStatus.font = .systemFont(ofSize: 11)
+        footerStatus.textColor = .secondaryLabelColor
+        footerStatus.stringValue = localized("Changes apply when you save.", "修改将在保存后生效。")
+        let cancel = NSButton(title: FlowSoundStrings.text(.cancel), target: self, action: #selector(cancel))
+        cancel.keyEquivalent = "\u{1b}"
+        cancel.identifier = .init("settings.cancel")
+        let save = NSButton(title: FlowSoundStrings.text(.save), target: self, action: #selector(save))
+        save.keyEquivalent = "\r"
+        save.identifier = .init("settings.save")
+        let space = NSView()
+        space.setContentHuggingPriority(.init(1), for: .horizontal)
+        let row = NSStackView(views: [reset, footerStatus, space, cancel, save])
         row.alignment = .centerY
-        row.spacing = 10
-
-        let labelView = NSTextField(labelWithString: label)
-        labelView.alignment = .right
-        labelView.widthAnchor.constraint(equalToConstant: Layout.labelWidth).isActive = true
-
-        row.addArrangedSubview(labelView)
-        row.addArrangedSubview(control)
+        row.spacing = 12
         return row
     }
-
-    private func formRow(_ label: String, _ field: NSTextField, _ help: String) -> NSStackView {
-        let row = controlRow(label, field)
+    private func flexibleRow(_ leading: NSView, _ trailing: NSView) -> NSStackView {
+        let spacer = NSView()
+        spacer.setContentHuggingPriority(.init(1), for: .horizontal)
+        leading.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        trailing.setContentHuggingPriority(.required, for: .horizontal)
+        let row = NSStackView(views: [leading, spacer, trailing])
+        row.spacing = 14
+        row.alignment = .centerY
+        return row
+    }
+    private func controlRow(_ title: String, _ control: NSView) -> NSStackView {
+        let label = NSTextField(labelWithString: title)
+        label.font = .systemFont(ofSize: 13)
+        control.setAccessibilityLabel(title)
+        return flexibleRow(label, control)
+    }
+    private func timingRow(_ title: String, detail: String, field: NSTextField, range: ClosedRange<Double>) -> NSStackView {
+        let text = NSStackView()
+        text.orientation = .vertical
+        text.alignment = .leading
+        text.spacing = 4
+        let heading = NSTextField(labelWithString: title)
+        heading.font = .systemFont(ofSize: 13)
+        let subtitle = NSTextField(labelWithString: detail)
+        subtitle.font = .systemFont(ofSize: 11)
+        subtitle.textColor = .secondaryLabelColor
+        text.addArrangedSubview(heading)
+        text.addArrangedSubview(subtitle)
+        let slider = SettingsTimingSlider(value: range.lowerBound, minValue: range.lowerBound, maxValue: range.upperBound, target: self, action: #selector(timingChanged(_:)))
+        slider.numberField = field
+        slider.widthAnchor.constraint(equalToConstant: 180).isActive = true
+        slider.setAccessibilityLabel(title)
+        timingSliders.append(slider)
         field.alignment = .right
-        field.placeholderString = "0.0"
-        field.toolTip = help
+        field.delegate = self
+        field.setAccessibilityLabel(title)
         setFixedWidth(Layout.fieldWidth, for: field)
-
-        let helpView = NSTextField(labelWithString: help)
-        helpView.textColor = .secondaryLabelColor
-        helpView.lineBreakMode = .byTruncatingTail
-        helpView.maximumNumberOfLines = 1
-        helpView.widthAnchor.constraint(equalToConstant: 360).isActive = true
-        row.addArrangedSubview(helpView)
-        return row
+        let unit = NSTextField(labelWithString: localized("sec", "秒"))
+        unit.font = .systemFont(ofSize: 11)
+        unit.textColor = .secondaryLabelColor
+        let controls = NSStackView(views: [slider, field, unit])
+        controls.spacing = 8
+        return flexibleRow(text, controls)
     }
+    private func numericRow(_ title: String, field: NSTextField, detail: String) -> NSStackView {
+        field.delegate = self
+        field.alignment = .right
+        field.toolTip = detail
+        field.setAccessibilityLabel(title)
+        setFixedWidth(Layout.fieldWidth, for: field)
+        let text = NSStackView(views: [NSTextField(labelWithString: title), NSTextField(wrappingLabelWithString: detail)])
+        text.orientation = .vertical
+        text.alignment = .leading
+        text.spacing = 4
+        (text.arrangedSubviews.last as? NSTextField)?.font = .systemFont(ofSize: 11)
+        (text.arrangedSubviews.last as? NSTextField)?.textColor = .secondaryLabelColor
+        return flexibleRow(text, field)
+    }
+    @objc private func timingChanged(_ sender: SettingsTimingSlider) {
+        sender.numberField?.stringValue = String(format: "%.1f", sender.doubleValue)
+        markDraftChanged()
+    }
+    func controlTextDidChange(_ notification: Notification) {
+        synchronizeTimingSliders()
+        markDraftChanged()
+    }
+    func textDidChange(_ notification: Notification) {
+        refreshApplicationRulesSummary()
+        markDraftChanged()
+    }
+    private func synchronizeTimingSliders() {
+        for case let slider as SettingsTimingSlider in timingSliders {
+            if let field = slider.numberField, let value = Double(field.stringValue) { slider.doubleValue = value }
+        }
+    }
+    @objc private func settingsControlChanged() { markDraftChanged() }
+    private func markDraftChanged() { footerStatus.stringValue = localized("Changes apply when you save.", "修改将在保存后生效。") }
+    @objc private func toggleProfiles(_ sender: NSButton) { profileSection?.isHidden = sender.state != .on; refreshTabDocumentHeights() }
 
     private func populateFields(settings draft: FlowSoundSettings? = nil) {
         let settings = draft ?? settingsStore.settings
@@ -612,6 +656,8 @@ final class PreferencesWindowController {
         launchAtLoginCheckbox.state = launchAtLoginState ? .on : .off
         loginItemStatusLabel.stringValue = LoginItemController.statusText
         loginItemStatusLabel.textColor = .secondaryLabelColor
+        synchronizeTimingSliders()
+        markDraftChanged()
         updateBundleIdentifierEditorAvailability()
         musicPlayerChanged()
         refreshApplicationRulesSummary()
@@ -644,6 +690,7 @@ final class PreferencesWindowController {
             refreshRecentAudioSources()
             refreshAdapterProfiles()
         }
+        footerStatus.stringValue = localized("Saved", "已保存")
         if let loginItemError {
             loginItemStatusLabel.textColor = .systemRed
             loginItemStatusLabel.stringValue = loginItemError
@@ -670,12 +717,13 @@ final class PreferencesWindowController {
     }
 
     private func resetReusableViewsForNewWindow() {
-        contentHeightConstraint?.isActive = false
-        contentHeightConstraint = nil
         tabContentViews.removeAll()
         contentContainer.subviews.forEach { $0.removeFromSuperview() }
         contentContainer.removeFromSuperview()
-        tabControl.removeFromSuperview()
+        preferencesToolbar = nil
+        timingSliders.removeAll()
+        watchedRulesColumn = nil
+        excludedRulesColumn = nil
         launchAtLoginCheckbox.title = FlowSoundStrings.text(.launchAtLogin)
         recentSourcesDocumentView.subviews.forEach { $0.removeFromSuperview() }
     }
@@ -743,6 +791,8 @@ final class PreferencesWindowController {
 
     @objc private func monitoringModeChanged() {
         updateBundleIdentifierEditorAvailability()
+        refreshApplicationRulesSummary()
+        markDraftChanged()
     }
 
     @objc private func refreshRecentAudioSources() {
@@ -755,7 +805,7 @@ final class PreferencesWindowController {
         guard !sources.isEmpty else {
             let empty = NSTextField(wrappingLabelWithString: FlowSoundStrings.text(.recentAudioSourcesEmpty))
             empty.textColor = .secondaryLabelColor
-            empty.widthAnchor.constraint(equalToConstant: Layout.contentWidth - 18).isActive = true
+            empty.widthAnchor.constraint(equalToConstant: Layout.contentWidth - 56).isActive = true
             recentSourcesStack.addArrangedSubview(empty)
             updateRecentSourcesDocumentHeight(rowCount: 1)
             return
@@ -776,15 +826,15 @@ final class PreferencesWindowController {
         for profile in MusicAdapterProfileStore.shared.profiles {
             let label = NSTextField(wrappingLabelWithString: "\(profile.displayName) - \(profile.supportLevel.rawValue) - \(profile.playbackStateCapability.rawValue) / \(profile.volumeControlCapability.rawValue)")
             label.textColor = profile.supportLevel == .official ? .labelColor : .secondaryLabelColor
-            label.widthAnchor.constraint(equalToConstant: Layout.contentWidth).isActive = true
+            label.widthAnchor.constraint(equalToConstant: Layout.contentWidth - 32).isActive = true
             adapterProfilesStack.addArrangedSubview(label)
         }
     }
 
     private func updateRecentSourcesDocumentHeight(rowCount: Int) {
-        let height = max(CGFloat(rowCount) * 54 + 20, 250)
-        recentSourcesDocumentView.setFrameSize(NSSize(width: Layout.contentWidth, height: height))
-        recentSourcesStack.frame = NSRect(x: 10, y: 10, width: Layout.contentWidth - 20, height: height - 20)
+        let height = max(CGFloat(rowCount) * 62, Layout.recentSourcesHeight)
+        recentSourcesDocumentView.setFrameSize(NSSize(width: Layout.contentWidth - 32, height: height))
+        recentSourcesStack.frame = NSRect(x: 0, y: 0, width: Layout.contentWidth - 48, height: height)
     }
 
     private func makeRecentSourceRow(_ source: RecentAudioSource) -> NSStackView {
@@ -807,12 +857,12 @@ final class PreferencesWindowController {
         let title = NSTextField(labelWithString: appName(for: source))
         title.font = .systemFont(ofSize: 12, weight: .medium)
         title.lineBreakMode = .byTruncatingTail
-        let detail = NSTextField(labelWithString: "\(source.bundleIdentifier)  pid=\(source.pid)")
+        let detail = NSTextField(labelWithString: source.bundleIdentifier)
         detail.textColor = .secondaryLabelColor
         detail.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
         detail.lineBreakMode = .byTruncatingMiddle
         detail.maximumNumberOfLines = 1
-        textStack.widthAnchor.constraint(equalToConstant: 300).isActive = true
+        textStack.widthAnchor.constraint(equalToConstant: 350).isActive = true
         textStack.addArrangedSubview(title)
         textStack.addArrangedSubview(detail)
 
@@ -849,7 +899,8 @@ final class PreferencesWindowController {
         row.addArrangedSubview(textStack)
         row.addArrangedSubview(status)
         row.addArrangedSubview(actionRow)
-        row.widthAnchor.constraint(equalToConstant: Layout.contentWidth - 28).isActive = true
+        row.heightAnchor.constraint(equalToConstant: 62).isActive = true
+        row.widthAnchor.constraint(equalToConstant: Layout.contentWidth - 48).isActive = true
         return row
     }
 
@@ -883,6 +934,7 @@ final class PreferencesWindowController {
         excludedBundleIdentifiersTextView.string = draft.excluded.joined(separator: "\n")
         refreshApplicationRulesSummary()
         refreshRecentAudioSources()
+        markDraftChanged()
     }
 
     @objc private func chooseWatchedApplications() { chooseApplications(to: .watched) }
@@ -902,43 +954,29 @@ final class PreferencesWindowController {
         excludedBundleIdentifiersTextView.string = draft.excluded.joined(separator: "\n")
         refreshApplicationRulesSummary()
         refreshRecentAudioSources()
+        markDraftChanged()
     }
 
     private func refreshApplicationRulesSummary() {
-        applicationRulesSummary.arrangedSubviews.forEach { view in
-            applicationRulesSummary.removeArrangedSubview(view)
-            view.removeFromSuperview()
-        }
-        let lists: [(FlowSoundStrings.Key, String, RecentSourceList)] = [
-            (.watchedApps, watchedBundleIdentifiersTextView.string, .watched),
-            (.excludedApps, excludedBundleIdentifiersTextView.string, .excluded)
-        ]
-        for (titleKey, text, list) in lists {
-            let title = FlowSoundStrings.text(titleKey)
-            let label = NSTextField(labelWithString: title)
-            label.font = .systemFont(ofSize: 12, weight: .semibold)
-            applicationRulesSummary.addArrangedSubview(label)
-            applicationRulesSummary.addArrangedSubview(ApplicationRulePicker.summaryView(
-                identifiers: FlowSoundSettings.bundleIdentifiers(fromText: text), width: Layout.contentWidth - 24,
-                onRemove: { [weak self] identifier in self?.removeApplicationFromDraft(identifier, from: list) }
-            ))
-        }
-        applicationRulesSummary.layoutSubtreeIfNeeded()
-        let height = max(160, applicationRulesSummary.fittingSize.height)
-        applicationRulesSummary.frame = NSRect(x: 0, y: 0, width: Layout.contentWidth - 20, height: height)
-        applicationRulesSummary.superview?.setFrameSize(NSSize(width: Layout.contentWidth, height: height))
+        let automatic = Set(selectedMusicPlayer().bundleIdentifiers + [Bundle.main.bundleIdentifier ?? "com.flowsound.FlowSound", "com.flowsound.FlowSound"])
+        watchedRulesColumn?.update(identifiers: FlowSoundSettings.bundleIdentifiers(fromText: watchedBundleIdentifiersTextView.string).filter { !automatic.contains($0) }, inactive: selectedMonitoringMode() == .allNonMusic)
+        excludedRulesColumn?.update(identifiers: FlowSoundSettings.bundleIdentifiers(fromText: excludedBundleIdentifiersTextView.string).filter { !automatic.contains($0) })
+        fixedExclusionsLabel.stringValue = localized("Always ignored: \(selectedMusicPlayer().displayName) and FlowSound.", "始终忽略：\(selectedMusicPlayer().displayName) 和 FlowSound。")
     }
 
     @objc private func toggleAdvancedRules() {
         guard let advancedRulesSection else { return }
         advancedRulesSection.isHidden.toggle()
-        advancedRulesButton?.title = FlowSoundStrings.text(advancedRulesSection.isHidden ? .advancedToggleShow : .advancedToggleHide)
+        advancedRulesButton?.state = advancedRulesSection.isHidden ? .off : .on
         refreshApplicationRulesSummary()
         refreshTabDocumentHeights()
     }
 
     @objc private func musicPlayerChanged() {
+        markDraftChanged()
         experimentalSection?.isHidden = selectedMusicPlayer() != .neteaseCloudMusic
+        if selectedTab == .general { resizeWindowForPane() }
+        refreshApplicationRulesSummary()
         refreshRecentAudioSources()
         refreshTabDocumentHeights()
     }
@@ -966,12 +1004,12 @@ final class PreferencesWindowController {
     }
 
     private func appName(for source: RecentAudioSource) -> String {
-        NSRunningApplication(processIdentifier: source.pid)?.localizedName ?? source.bundleIdentifier
+        NSRunningApplication(processIdentifier: source.pid)?.localizedName ?? ApplicationRulePresentation.resolve(identifier: source.bundleIdentifier).name
     }
 
     private func appIcon(for source: RecentAudioSource) -> NSImage? {
         NSRunningApplication(processIdentifier: source.pid)?.icon
-            ?? NSImage(systemSymbolName: "waveform", accessibilityDescription: nil)
+            ?? ApplicationRulePresentation.resolve(identifier: source.bundleIdentifier).image
     }
 
     private func statusLabel(for status: RecentAudioSourceStatus) -> String {
@@ -1118,4 +1156,14 @@ final class PreferencesWindowController {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(FlowSoundDiagnostics.logPath, forType: .string)
     }
+}
+
+
+@MainActor
+private final class SettingsTimingSlider: NSSlider {
+    weak var numberField: NSTextField?
+}
+
+private func localized(_ english: String, _ chinese: String) -> String {
+    FlowSoundLanguage.current == .simplifiedChinese ? chinese : english
 }

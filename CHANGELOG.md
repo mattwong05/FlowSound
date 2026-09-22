@@ -14,6 +14,29 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.18.0] - 2026-09-23
+
+### Added
+
+- Added separate application-rule columns with fixed headers, application counts, empty states, friendly system names, and aligned keyboard-accessible removal controls.
+- Added a dedicated Sound pane with native sliders and exact numeric inputs for fade, restore and detection timing.
+- Added a documented native macOS design baseline and repeatable visual acceptance guidance.
+- Added an isolated native preview script for screenshot review and settings draft, persistence and keyboard-focus checks.
+
+### Changed
+
+- Replaced in-content segmented navigation with a native settings toolbar for General, Applications, Sound and Tools, with pane-sized windows and a fixed Save/Cancel footer.
+- Separated always-ignored music players and FlowSound from editable rule rows; advanced identifiers and community adapters are disclosed on demand.
+- Redesigned Diagnostics with aligned information rows, contextual settings actions and collapsible technical tools, and made About compact.
+- Simplified the native menu bar menu and added the standard Settings keyboard shortcut in the application menu.
+- Updated English and Simplified Chinese copy, semantic light/dark colors, spacing, and control hierarchy while preserving draft Save/Cancel behavior.
+
+### Fixed
+
+- Fixed application removal buttons moving with app-name length and list headings appearing inside the shared scrolling content.
+- Fixed outer scrolling content overlapping list actions, and disclosure controls hiding their labels.
+- Kept keyboard focus in the edited rule column when the same identifier appears in both lists.
+
 ## [0.17.0] - 2026-09-23
 
 ### Added

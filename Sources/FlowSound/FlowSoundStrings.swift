@@ -374,7 +374,7 @@ enum FlowSoundStrings {
         case .menuCopyDiagnostics:
             "Copy Diagnostics Path"
         case .menuPreferences:
-            "Preferences..."
+            "Settings…"
         case .menuQuit:
             "Quit FlowSound"
         case .menuShowDiagnostics:
@@ -632,7 +632,7 @@ enum FlowSoundStrings {
         case .menuCopyDiagnostics:
             "复制诊断日志路径"
         case .menuPreferences:
-            "偏好设置..."
+            "设置…"
         case .menuQuit:
             "退出 FlowSound"
         case .menuShowDiagnostics:

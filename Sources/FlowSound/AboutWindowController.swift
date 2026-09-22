@@ -3,52 +3,78 @@ import AppKit
 @MainActor
 final class AboutWindowController {
     private var window: NSWindow?
+    private var displayedLanguage: FlowSoundLanguage?
 
     func show() {
+        if displayedLanguage != FlowSoundLanguage.current {
+            window?.close()
+            window = nil
+        }
         if let window {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
+        displayedLanguage = .current
 
-        let contentView = NSStackView()
-        contentView.orientation = .vertical
-        contentView.alignment = .centerX
-        contentView.spacing = 14
-        contentView.edgeInsets = NSEdgeInsets(top: 24, left: 24, bottom: 24, right: 24)
+        let content = NSView()
+        let stack = NSStackView()
+        stack.orientation = .vertical
+        stack.alignment = .centerX
+        stack.spacing = 8
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(stack)
 
-        if let image = loadLogoForCurrentAppearance() {
+        let image = loadAppIcon() ?? NSImage(systemSymbolName: "music.note", accessibilityDescription: nil)
+        if let image {
             let imageView = NSImageView(image: image)
             imageView.imageScaling = .scaleProportionallyUpOrDown
-            imageView.translatesAutoresizingMaskIntoConstraints = false
+            imageView.wantsLayer = true
+            imageView.layer?.cornerRadius = 16
+            imageView.layer?.cornerCurve = .continuous
+            imageView.layer?.masksToBounds = true
+            imageView.setAccessibilityElement(false)
             NSLayoutConstraint.activate([
-                imageView.widthAnchor.constraint(equalToConstant: 320),
-                imageView.heightAnchor.constraint(equalToConstant: 220)
+                imageView.widthAnchor.constraint(equalToConstant: 72),
+                imageView.heightAnchor.constraint(equalToConstant: 72)
             ])
-            contentView.addArrangedSubview(imageView)
+            stack.addArrangedSubview(imageView)
+            stack.setCustomSpacing(16, after: imageView)
         }
 
         let title = NSTextField(labelWithString: "FlowSound")
-        title.font = .systemFont(ofSize: 24, weight: .semibold)
-        contentView.addArrangedSubview(title)
+        title.font = .systemFont(ofSize: 20, weight: .semibold)
+        stack.addArrangedSubview(title)
 
         let version = NSTextField(labelWithString: FlowSoundStrings.text(.version(Self.appVersion)))
+        version.font = .systemFont(ofSize: 13)
         version.textColor = .secondaryLabelColor
-        contentView.addArrangedSubview(version)
+        version.isSelectable = true
+        stack.addArrangedSubview(version)
+        stack.setCustomSpacing(16, after: version)
 
         let detail = NSTextField(wrappingLabelWithString: FlowSoundStrings.text(.aboutDetail))
+        detail.font = .systemFont(ofSize: 13)
+        detail.textColor = .secondaryLabelColor
         detail.alignment = .center
-        detail.maximumNumberOfLines = 2
-        contentView.addArrangedSubview(detail)
+        detail.setContentCompressionResistancePriority(.required, for: .vertical)
+        detail.widthAnchor.constraint(equalToConstant: 312).isActive = true
+        stack.addArrangedSubview(detail)
+        NSLayoutConstraint.activate([
+            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 24),
+            stack.centerXAnchor.constraint(equalTo: content.centerXAnchor),
+            stack.leadingAnchor.constraint(greaterThanOrEqualTo: content.leadingAnchor, constant: 24),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -24)
+        ])
 
         let aboutWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 390),
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 268),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
         aboutWindow.title = FlowSoundStrings.text(.aboutTitle)
-        aboutWindow.contentView = contentView
+        aboutWindow.contentView = content
         aboutWindow.center()
         aboutWindow.isReleasedWhenClosed = false
         aboutWindow.makeKeyAndOrderFront(nil)
@@ -56,21 +82,12 @@ final class AboutWindowController {
         window = aboutWindow
     }
 
-    private func loadBundledImage(named name: String) -> NSImage? {
-        guard let url = Bundle.main.url(forResource: name, withExtension: "png") else {
-            return nil
+    private func loadAppIcon() -> NSImage? {
+        if let url = Bundle.main.url(forResource: "FlowSound", withExtension: "icns"),
+           let image = NSImage(contentsOf: url) {
+            return image
         }
-        return NSImage(contentsOf: url)
-    }
-
-    private func loadLogoForCurrentAppearance() -> NSImage? {
-        let bestMatch = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua])
-        let preferredName = bestMatch == .darkAqua ? "FlowSoundLogoDarkBackground" : "FlowSoundLogoLightBackground"
-        let fallbackName = bestMatch == .darkAqua ? "FlowSoundLogoLightBackground" : "FlowSoundLogoDarkBackground"
-        return NSImage(named: preferredName)
-            ?? loadBundledImage(named: preferredName)
-            ?? loadBundledImage(named: fallbackName)
-            ?? loadBundledImage(named: "FlowSound-iCon")
+        return NSImage(named: NSImage.applicationIconName)
     }
 
     private static var appVersion: String {

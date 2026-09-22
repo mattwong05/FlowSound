@@ -20,6 +20,14 @@ Run unit tests:
 swift test
 ```
 
+Preview and exercise the native interface in an interactive macOS session:
+
+```sh
+scripts/preview-ui.sh
+```
+
+This builds a separate preview app with a fake music adapter, a manual monitor and temporary preferences. It checks draft removal, empty-list Save, exact slider values, Reset and Cancel, then captures English/Chinese, light/dark, long-list and short-window cases under `.build/ui-preview/`. Screen capture must already be available to the invoking terminal. It does not start production audio monitoring or control a music player. Inspect the captures against [the interface design](docs/DESIGN.md); this is layout and interaction evidence, not installed-app or accessibility acceptance. Use the actual app separately for menu shortcuts, VoiceOver and system appearance settings.
+
 Build a local app bundle:
 
 ```sh
@@ -99,6 +107,7 @@ Keep the landing page copy straightforward. The page should explain what FlowSou
 Before merging functional changes:
 
 - Run unit tests.
+- For interface changes, run the native preview above and inspect all affected panes, empty states, long names and expanded advanced sections. Keep toolbar controls and Save/Cancel reachable on short screens, and test keyboard focus through the application lists.
 - Prefer polling expected async service state in tests instead of relying on fixed sleeps.
 - For launch-at-login changes, test both paths: changing the checkbox should call the native registration path, while saving Preferences again without changing the checkbox should leave the login item untouched.
 - Run state machine tests.

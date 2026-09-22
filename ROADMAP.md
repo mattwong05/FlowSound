@@ -127,3 +127,9 @@ Historical version sections below describe delivered milestones, not verificatio
 - Measure CPU, energy impact, and actual fade latency during a representative long session.
 - Keep Netease experimental until its menu and approximate volume behavior pass the dedicated matrix.
 - Freeze user-visible behavior and tested platform claims.
+
+## 0.18.x Native Interface
+
+Implemented: native settings toolbar; separate watched/ignored columns; aligned add/remove controls and empty states; dedicated sound controls; compact menu, Diagnostics and About; English/Chinese and light/dark visual review.
+
+Next acceptance: signed installed UI on macOS 26 and 27, VoiceOver, increased contrast/reduced transparency, full keyboard access, and the runtime matrix in `docs/COMPATIBILITY.md`.

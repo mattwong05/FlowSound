@@ -71,10 +71,10 @@ final class StatusMenuController {
         menu.addItem(.separator())
         menu.addItem(toggleMenuItem)
         menu.addItem(.separator())
-        menu.addItem(diagnosticsMenuItem)
-        menu.addItem(.separator())
         menu.addItem(preferencesMenuItem)
+        menu.addItem(diagnosticsMenuItem)
         menu.addItem(aboutMenuItem)
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: FlowSoundStrings.text(.menuQuit), action: #selector(quit), keyEquivalent: "q"))
         menu.items.last?.target = self
         statusItem.menu = menu
@@ -94,11 +94,16 @@ final class StatusMenuController {
             label = state.label(playerName: settingsStore.settings.controlledMusicPlayer.displayName)
         }
         FlowSoundDiagnostics.log("render state: \(label)")
-        statusMenuItem.title = FlowSoundStrings.text(.status(label))
+        // Keep errors in the diagnostics window from making the menu excessively wide.
+        let menuLabel = label.count > 72 ? String(label.prefix(71)) + "…" : label
+        statusMenuItem.title = menuLabel
+        statusMenuItem.toolTip = label
         toggleMenuItem.title = state == .disabled ? FlowSoundStrings.text(.menuActivate) : FlowSoundStrings.text(.menuDeactivate)
 
         if let button = statusItem.button {
             button.toolTip = "FlowSound: \(label)"
+            button.setAccessibilityLabel("FlowSound")
+            button.setAccessibilityValue(label)
         }
         updateStatusIcon(for: state)
     }
@@ -122,7 +127,7 @@ final class StatusMenuController {
         aboutWindowController.show()
     }
 
-    @objc private func showPreferences() {
+    @objc func showPreferences() {
         preferencesWindowController.show()
     }
 

@@ -123,7 +123,7 @@ Watched bundle identifiers are parsed from Preferences, validated, deduplicated,
 
 Safari is expanded at runtime to include WebKit helper bundle identifiers because website audio, including YouTube playback, may be emitted by helper processes rather than the `com.apple.Safari` process itself.
 
-Preferences uses General, Monitoring, and Tools tabs. General owns language, music app, timing, and launch-at-login. Monitoring owns raw watched and excluded bundle identifier editors. Tools owns the diagnostics actions and a recent audio source panel that records Core Audio output processes seen in the last 3 minutes, including their current watched or excluded status. Recent-source rows and native application pickers update a shared draft. Save is the only persistence boundary; Cancel discards changes. Monitoring shows app names/icons and keeps raw identifiers in an advanced editor.
+Preferences uses a non-customizable native `NSToolbar` with General, Applications, Sound and Tools panes. General owns music/language/login options. Sound owns sliders and precise timing fields. Applications uses two `ApplicationRuleColumn` views with fixed headers and independent scrolling, while the selected music player and FlowSound are summarized as always ignored. The advanced editor retains the complete identifier lists. Tools owns recent audio sources and diagnostics, with community profile tools collapsed initially. All editable controls, application pickers and recent-source actions update one draft; Save persists it and Cancel discards it. Native semantic colors and controls follow the host system appearance; visual conventions live in `docs/DESIGN.md`.
 
 ### LoginItemController
 

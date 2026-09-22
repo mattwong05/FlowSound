@@ -68,11 +68,11 @@ The current build is a native Swift menu bar app with:
 - Process-output polling fallback for watched apps when the tap has not produced an RMS activity signal yet.
 - Live diagnostics with a restore countdown, permission shortcuts, retry, and an advanced section for manual simulation.
 - Split logo assets generated from `FlowSound-iCon.png`, including dark-background, light-background, and menu bar template variants.
-- An About window that chooses the light or dark FlowSound logo artwork based on appearance.
+- A compact About window with the application icon, version and a short description.
 - A localized English and Simplified Chinese interface selected from system language, defaulting to English.
-- A tabbed Preferences window for General, Monitoring, and Tools settings.
+- A native Settings toolbar with General, Applications, Sound, and Tools panes.
 - Language selection with System, English, and Simplified Chinese options.
-- A Tools panel that lists recently detected audio sources from the last 3 minutes with bundle identifier, pid, and watched/excluded status.
+- A Tools panel that lists recently detected audio sources from the last 3 minutes with application name, bundle identifier and watched/excluded status.
 - Quick actions in Tools to add recently detected apps to a watched/excluded draft, applied with Save.
 - A generated `.icns` app icon bundled into `FlowSound.app`.
 - Default activation on launch, with manual Activate / Deactivate control from the menu bar.
@@ -179,18 +179,19 @@ On macOS 26, System Settings > Menu Bar > Allow in the Menu Bar is not a reliabl
 
 The menu bar icon uses generated transparent template assets extracted from the wave-and-note glyphs. macOS tints these assets automatically for light and dark menu bars. The activated icon comes from `FlowSound-iCon.png`; the deactivated icon comes from `FlowSound-Deactivate-iCon.png`.
 
-The source `FlowSound-iCon.png` is also split into `Assets/FlowSoundLogoDarkBackground.png` and `Assets/FlowSoundLogoLightBackground.png`; keep the full wordmark for About, marketing, or installer screens. The source `FlowSound-Deactivate-iCon.png` is split into `Assets/FlowSoundDeactivateLightBackground.png` and `Assets/FlowSoundDeactivateDarkBackground.png`.
+The source `FlowSound-iCon.png` is also split into `Assets/FlowSoundLogoDarkBackground.png` and `Assets/FlowSoundLogoLightBackground.png`; keep the full wordmark for marketing or installer screens. About uses the app icon. The source `FlowSound-Deactivate-iCon.png` is split into `Assets/FlowSoundDeactivateLightBackground.png` and `Assets/FlowSoundDeactivateDarkBackground.png`.
 
-The app icon is generated as `Assets/FlowSound.icns` during packaging and copied into the app bundle. Finder may cache app icons; if the app icon still looks blank after rebuilding, rename or move the rebuilt `.app`, or relaunch Finder.
+The app icon is checked in as `Assets/FlowSound.icns` and copied into the app bundle during packaging. Finder may cache app icons; if the app icon still looks blank after rebuilding, rename or move the rebuilt `.app`, or relaunch Finder.
 
 ## Preferences
 
-Open `Preferences...` from the menu bar menu to configure:
+Open `Settings…` from the menu bar menu (or press Command-comma while FlowSound is active) to configure:
 
-- General: language, music app, timing, and launch at login.
-- Monitoring: audio monitoring mode, watched app bundle identifiers, and excluded app bundle identifiers.
+- General: music app, language, and launch at login.
+- Applications: listening mode and separate watched/ignored application lists with names, icons, counts and aligned removal controls. The music player and FlowSound are summarized as always ignored.
+- Sound: fade and quiet timing with sliders plus exact numeric inputs, and detection sensitivity.
 - Tools: recently detected audio sources, diagnostics window, and diagnostics log path.
-- Tools: adapter profile import/export for inspecting and sharing experimental or community adapter metadata.
+- Tools > Community adapters: profile import/export for inspecting and sharing experimental or community adapter metadata.
 
 Adapter profiles currently describe identity, support level, bundle identifiers, declared capabilities, permissions, and notes. They do not contain executable control scripts and cannot add support for a brand-new player by themselves. Import reads `.json` profile files from `~/Library/Application Support/FlowSound/AdapterProfiles`; if the folder is empty, FlowSound opens it in Finder so you can place local profile files there.
 
@@ -202,9 +203,11 @@ Notifications are mixed on macOS. Some alert sounds come from system notificatio
 
 Safari is special-cased in watched-app-only mode because website audio is commonly emitted by WebKit helper processes instead of the `com.apple.Safari` main app process. Keeping `com.apple.Safari` in Preferences automatically expands the active Core Audio watch list to include `com.apple.WebKit.GPU`, `com.apple.WebKit.WebContent`, `com.apple.WebKit.Networking`, and `com.apple.SafariPlatformSupport.Helper`. Excluded apps still win after this expansion, so a WebKit helper listed in Excluded apps is removed from the effective watch list.
 
+The native toolbar and controls follow the system appearance on the running macOS version. See [the design baseline](docs/DESIGN.md) for layout, accessibility and visual acceptance conventions.
+
 ## Reliability and Settings
 
-Preferences uses a single draft: application pickers, recent-source actions, raw identifier edits, and Reset only change the draft. Save applies it; Cancel discards it. Monitoring shows app names, icons and removal buttons, with bundle identifiers available under Advanced. Exclusions take precedence over watched rules and Safari helper expansion.
+Preferences uses a single draft: application pickers, recent-source actions, raw identifier edits, and Reset only change the draft. Save applies it; Cancel discards it. Applications shows separate watched and ignored columns with app names, icons and fixed removal buttons; bundle identifiers remain under Advanced rules. Exclusions take precedence over watched rules and Safari helper expansion.
 
 Open Diagnostics from the menu or Preferences > Tools to see audio monitoring health, the latest player-control result, Accessibility and login-item status, and the remaining quiet countdown. Opening diagnostics does not request permissions or send playback commands. Automation remains “not yet verified” until a real operation succeeds. The captured stream is a mix; recent output processes are diagnostic hints, not proof of which app triggered a pause.
 

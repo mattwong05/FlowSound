@@ -2,13 +2,14 @@
 
 This is an evidence record, not a blanket compatibility claim. Minimum deployment target remains macOS 15. Public packages contain Apple Silicon (arm64) and Intel (x86_64) slices. Compiler/SDK version, host OS, runtime OS, app signature and hardware evidence are distinct.
 
-## Current local evidence — 0.17.0 development, 2026-09-23
+## Current local evidence — 0.18.0 development, 2026-09-23
 
 - Host: macOS 26.6.2 on arm64.
 - Toolchain: Xcode 27.0 (27A266a), Swift 6.4, macOS 27.0 SDK.
 - Packaging passes the selected SDK explicitly and checks each Mach-O slice's SDK metadata independently from the macOS 15 deployment target. A successful SDK 27 build does not establish macOS 27 runtime behavior.
 - All 67 Swift tests passed. Service, settings, signal/PCM, lifecycle fault-injection and command-runner tests use fakes or local non-player commands. They do not open audio devices, grant TCC permissions, or control real players.
-- Native UI previews use a fake adapter, a manual monitor and isolated temporary preferences. Sixteen English/Chinese preview captures and two final rule-removal captures were inspected; draft changes, Reset, removal and Cancel were checked without persistent settings writes. They establish layout/draft behavior only.
+- Native UI previews use a fake adapter, a manual monitor and isolated temporary preferences. `scripts/preview-ui.sh` passed rule removal, empty-list Save, exact slider Save, Reset and Cancel in English/Chinese and light/dark appearances, plus overlapping-rule keyboard-focus preservation. All 44 screenshots were reviewed, covering the four Settings panes, empty/long lists, short windows, advanced rules/community adapters, experimental integration, Diagnostics and About. They establish layout/draft behavior only; production preferences are not used for these writes. Native menu behavior and complete keyboard/VoiceOver acceptance still require the installed-app checks below.
+- The user reported that 0.17.0 runs on macOS 26. The exact OS build, hardware and tested scenarios were not supplied; this is basic runtime feedback for 0.17.0, not acceptance of 0.18.0 or the complete matrix below.
 - All 24 isolated release safeguard checks passed, covering configuration, stable release prerequisites, changelog/version checks, per-architecture SDK metadata and preservation of existing artifacts.
 - Universal app build, bundle metadata, ad-hoc signature, archive checksum and packaging safeguard checks are software/package evidence only.
 - Developer ID signing, notarization, Gatekeeper acceptance, real-player behavior, energy use and macOS 15/27 runtime behavior remain **not verified in this implementation session**.
@@ -31,7 +32,7 @@ Record the exact OS build, machine/architecture, player version, FlowSound versi
 | Installed UI: EN/ZH, short screen, keyboard, VoiceOver, light/dark | Not tested | Not tested | Not tested |
 | 2-hour idle/playback CPU, wakeups, energy impact and fade latency | Not tested | Not tested | Not tested |
 
-macOS 27 UI regression checks include the segmented tab control and NSTextView editing/undo. API availability guards keep the existing macOS 15 path. See Apple's [macOS 27 release notes](https://developer.apple.com/documentation/macos-release-notes/macos-27-release-notes) and [Xcode 27 release notes](https://developer.apple.com/documentation/xcode-release-notes/xcode-27-release-notes).
+macOS 27 UI regression checks include the native Settings toolbar, sliders and numeric fields, both application-list scroll areas, menu shortcuts, and NSTextView editing/undo. Also check VoiceOver, Increase Contrast and Reduce Transparency on the running app. API availability guards keep the existing macOS 15 path. See [the design rationale](DESIGN.md), Apple's [macOS 27 release notes](https://developer.apple.com/documentation/macos-release-notes/macos-27-release-notes) and [Xcode 27 release notes](https://developer.apple.com/documentation/xcode-release-notes/xcode-27-release-notes).
 
 ## Expected failure behavior
 
