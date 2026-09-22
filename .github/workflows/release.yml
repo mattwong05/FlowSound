@@ -5,6 +5,14 @@ on:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
+    inputs:
+      signing_mode:
+        description: 'Distribution signing (Developer ID also requires notarization credentials)'
+        type: choice
+        options:
+          - ad-hoc
+          - developer-id
+        default: ad-hoc
 
 concurrency:
   group: release-${{ github.ref }}
@@ -35,6 +43,7 @@ jobs:
         env:
           IS_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
           RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_SIGNING: ${{ inputs.signing_mode || vars.FLOWSOUND_RELEASE_SIGNING || 'ad-hoc' }}
           SIGN_IDENTITY: ${{ secrets.DEVELOPER_ID_SIGN_IDENTITY }}
           DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
           DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
@@ -43,19 +52,32 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
-          if [[ "$IS_TAG" == true ]]; then
-            for variable in DEVELOPER_ID_CERTIFICATE_BASE64 DEVELOPER_ID_CERTIFICATE_PASSWORD KEYCHAIN_PASSWORD; do
-              if [[ -z "${!variable}" ]]; then
-                echo "Stable release requires $variable." >&2
-                exit 1
-              fi
-            done
-            RELEASE_CHANNEL=stable NOTARIZE=1 scripts/package-release.sh --check
-            echo 'channel=stable' >> "$GITHUB_OUTPUT"
-          else
-            SIGN_IDENTITY= NOTARIZE=0 RELEASE_CHANNEL=test scripts/package-release.sh --check
-            echo 'channel=test' >> "$GITHUB_OUTPUT"
-          fi
+          case "$RELEASE_SIGNING" in
+            ad-hoc)
+              # This is an intentional distribution choice, not a fallback
+              # after a signing or notarization failure.
+              export SIGN_IDENTITY= NOTARIZE=0
+              ;;
+            developer-id)
+              for variable in SIGN_IDENTITY DEVELOPER_ID_CERTIFICATE_BASE64 DEVELOPER_ID_CERTIFICATE_PASSWORD KEYCHAIN_PASSWORD APPLE_ID APPLE_TEAM_ID APPLE_APP_SPECIFIC_PASSWORD; do
+                if [[ -z "${!variable}" ]]; then
+                  echo "Developer ID distribution requires $variable." >&2
+                  exit 1
+                fi
+              done
+              export NOTARIZE=1
+              ;;
+            *)
+              echo 'FLOWSOUND_RELEASE_SIGNING must be ad-hoc or developer-id.' >&2
+              exit 1
+              ;;
+          esac
+          if [[ "$IS_TAG" == true ]]; then export RELEASE_CHANNEL=stable
+          else export RELEASE_CHANNEL=test; fi
+          scripts/package-release.sh --check
+          echo "channel=$RELEASE_CHANNEL" >> "$GITHUB_OUTPUT"
+          echo "signing=$RELEASE_SIGNING" >> "$GITHUB_OUTPUT"
+          echo "notarize=$NOTARIZE" >> "$GITHUB_OUTPUT"
           echo "version=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
 
       - name: Validate packaging safeguards
@@ -67,7 +89,7 @@ jobs:
           swift build -c release
 
       - name: Import Developer ID certificate
-        if: steps.release.outputs.channel == 'stable'
+        if: steps.release.outputs.signing == 'developer-id'
         env:
           DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
           DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
@@ -84,23 +106,15 @@ jobs:
           security list-keychains -d user -s "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-      - name: Package stable release with signing and notarization
-        if: steps.release.outputs.channel == 'stable'
+      - name: Package release with the selected signing mode
         env:
-          RELEASE_CHANNEL: stable
+          RELEASE_CHANNEL: ${{ steps.release.outputs.channel }}
           RELEASE_TAG: ${{ github.ref_name }}
-          SIGN_IDENTITY: ${{ secrets.DEVELOPER_ID_SIGN_IDENTITY }}
-          NOTARIZE: '1'
+          SIGN_IDENTITY: ${{ steps.release.outputs.signing == 'developer-id' && secrets.DEVELOPER_ID_SIGN_IDENTITY || '' }}
+          NOTARIZE: ${{ steps.release.outputs.notarize }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-        run: scripts/package-release.sh
-
-      - name: Package ad-hoc signed test artifact
-        if: steps.release.outputs.channel == 'test'
-        env:
-          RELEASE_CHANNEL: test
-          NOTARIZE: '0'
         run: scripts/package-release.sh
 
       - name: Upload build artifacts
@@ -123,7 +137,7 @@ jobs:
             "$RELEASE_DIR/FlowSound-$RELEASE_VERSION.zip" \
             "$RELEASE_DIR/SHA256SUMS.txt" \
             "$RELEASE_DIR/BUILD_INFO.txt" \
-            --verify-tag --title "FlowSound $RELEASE_VERSION" \
+            --verify-tag --latest --title "FlowSound $RELEASE_VERSION" \
             --notes-file "$RELEASE_DIR/RELEASE_NOTES.md"
 
       - name: Remove temporary signing material

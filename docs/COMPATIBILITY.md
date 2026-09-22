@@ -2,17 +2,17 @@
 
 This is an evidence record, not a blanket compatibility claim. Minimum deployment target remains macOS 15. Public packages contain Apple Silicon (arm64) and Intel (x86_64) slices. Compiler/SDK version, host OS, runtime OS, app signature and hardware evidence are distinct.
 
-## Current local evidence — 0.18.0 development, 2026-09-23
+## Current local evidence — 0.18.0, 2026-09-23
 
 - Host: macOS 26.6.2 on arm64.
-- Toolchain: Xcode 27.0 (27A266a), Swift 6.4, macOS 27.0 SDK.
+- Local toolchain: Xcode 27.0 (27A266a), Swift 6.4, macOS 27.0 SDK. The official download is built separately by GitHub Actions; consult its accompanying `BUILD_INFO.txt` for the published package's actual compiler, SDK and per-architecture metadata.
 - Packaging passes the selected SDK explicitly and checks each Mach-O slice's SDK metadata independently from the macOS 15 deployment target. A successful SDK 27 build does not establish macOS 27 runtime behavior.
 - All 67 Swift tests passed. Service, settings, signal/PCM, lifecycle fault-injection and command-runner tests use fakes or local non-player commands. They do not open audio devices, grant TCC permissions, or control real players.
 - Native UI previews use a fake adapter, a manual monitor and isolated temporary preferences. `scripts/preview-ui.sh` passed rule removal, empty-list Save, exact slider Save, Reset and Cancel in English/Chinese and light/dark appearances, plus overlapping-rule keyboard-focus preservation. All 44 screenshots were reviewed, covering the four Settings panes, empty/long lists, short windows, advanced rules/community adapters, experimental integration, Diagnostics and About. They establish layout/draft behavior only; production preferences are not used for these writes. Native menu behavior and complete keyboard/VoiceOver acceptance still require the installed-app checks below.
 - The user reported that 0.17.0 runs on macOS 26. The exact OS build, hardware and tested scenarios were not supplied; this is basic runtime feedback for 0.17.0, not acceptance of 0.18.0 or the complete matrix below.
-- All 24 isolated release safeguard checks passed, covering configuration, stable release prerequisites, changelog/version checks, per-architecture SDK metadata and preservation of existing artifacts.
+- All 30 isolated release safeguard checks passed after enabling official ad-hoc distribution, covering configuration, stable release prerequisites, changelog/version checks, per-architecture SDK metadata, preservation of existing artifacts, and aborting on explicitly requested signing or notarization failures. They use mocked compiler/signing/notary commands and do not establish a real Developer ID or notarization result.
 - Universal app build, bundle metadata, ad-hoc signature, archive checksum and packaging safeguard checks are software/package evidence only.
-- Developer ID signing, notarization, Gatekeeper acceptance, real-player behavior, energy use and macOS 15/27 runtime behavior remain **not verified in this implementation session**.
+- The official 0.18.0 distribution is ad-hoc signed and intentionally not notarized. Its first-launch manual approval path, real-player behavior, energy use and macOS 15/27 runtime behavior remain **not verified in this implementation session**. Developer ID installation is an optional future distribution path, not the current release format.
 
 ## Runtime acceptance matrix
 
@@ -20,7 +20,7 @@ Record the exact OS build, machine/architecture, player version, FlowSound versi
 
 | Case | macOS 15 | macOS 26 | macOS 27 |
 | --- | --- | --- | --- |
-| Fresh signed install and Gatekeeper launch | Not tested | Not tested | Not tested |
+| Fresh ad-hoc install and manual first-launch approval | Not tested | Not tested | Not tested |
 | Audio capture: grant, deny, revoke, regrant and Retry | Not tested | Not tested | Not tested |
 | Apple Music / Spotify automation permission and complete fade/pause/restore | Not tested | Not tested | Not tested |
 | Netease helper TCC identity, Accessibility and both menu languages | Not tested | Not tested | Not tested |
@@ -46,4 +46,6 @@ macOS 27 UI regression checks include the native Settings toolbar, sliders and n
 
 ## Release gate
 
-A stable tag must match VERSION and refer to a clean commit contained in origin/main. Stable packaging requires both architectures, Developer ID Application signing with the Apple Events entitlement, successful notarization, stapling/Gatekeeper checks, and checksums. Those automated checks do not replace the runtime matrix above. Do not promote a test artifact to the default download while required acceptance remains unverified.
+A stable tag must match VERSION and refer to a clean commit contained in origin/main. Stable packaging requires both architectures, valid bundle metadata and signature integrity, the Apple Events entitlement, and checksums. Official releases use ad-hoc signing with manual first-launch approval by default. Developer ID signing and notarization are optional; when selected, credentials, signing, notarization, stapling and Gatekeeper checks must all succeed without an ad-hoc fallback.
+
+Publication status and signing method are separate: an official release can be ad-hoc signed. Automated package checks do not replace the runtime matrix above. Release notes must state the actual distribution method and any unverified runtime scenarios.

@@ -20,7 +20,7 @@ Public releases are published on GitHub:
 
 https://github.com/mattwong05/FlowSound/releases
 
-[0.18.0 public preview](https://github.com/mattwong05/FlowSound/releases/tag/preview-0.18.0) includes the redesigned native interface and reliability improvements. It is a universal, ad-hoc signed build and is **not notarized**. The existing [0.15.1 release](https://github.com/mattwong05/FlowSound/releases/tag/v0.15.1) remains the default release. See [preview notes](docs/releases/0.18.0-preview.md) for changes and validation limits.
+[Download FlowSound 0.18.0](https://github.com/mattwong05/FlowSound/releases/latest), the current official release, with the redesigned native interface and reliability improvements. It is a universal, ad-hoc signed build, distributed without Developer ID signing or Apple notarization. First launch may require approval in **System Settings > Privacy & Security > Open Anyway**. See [release notes](docs/releases/0.18.0.md) for changes and validation limits.
 
 Download `FlowSound-<version>.zip` and `SHA256SUMS.txt`, then verify the archive:
 
@@ -28,7 +28,7 @@ Download `FlowSound-<version>.zip` and `SHA256SUMS.txt`, then verify the archive
 shasum -a 256 -c SHA256SUMS.txt
 ```
 
-See [INSTALL.md](INSTALL.md) for installation, first-run permissions, unsigned build notes, and uninstall steps.
+See [INSTALL.md](INSTALL.md) for installation, first-run permissions, manual opening instructions, and uninstall steps.
 
 ## Branch Policy
 
@@ -118,7 +118,7 @@ For development:
 - Xcode Command Line Tools.
 - Swift and Swift Package Manager as provided by Xcode.
 - Git, recommended before implementation starts.
-- Apple Developer account, recommended for Developer ID signing, notarization, and testing permission flows close to release behavior.
+- An Apple Developer account is optional. It is only needed to produce Developer ID signed and notarized packages; the official release uses ad-hoc signing and manual first-launch approval.
 
 No third-party runtime dependency is required for the planned MVP.
 
@@ -135,11 +135,11 @@ FlowSound will need:
 - System audio capture permission for Core Audio taps.
 - `NSAudioCaptureUsageDescription` in the app Info.plist.
 - Apple Events / Automation permission to control Music or Spotify.
-- Hardened runtime and signing configuration before distributing outside local development.
+- The Apple Events entitlement is included in both ad-hoc and Developer ID signed app bundles. Developer ID packages also enable Hardened Runtime.
 
 If App Sandbox is enabled, Apple Events control of Music and Spotify must be tested carefully because sandboxing changes automation requirements.
 
-Launch at login uses `SMAppService.mainApp`. Preferences only updates the login item when the checkbox value changes. Local `.build/FlowSound.app` builds can report `notFound` before registration or `requiresApproval` after registration; FlowSound treats `notFound` as a state where registration can still be attempted. Release validation should still use a signed and installed app bundle.
+Launch at login uses `SMAppService.mainApp`. Preferences only updates the login item when the checkbox value changes. Local `.build/FlowSound.app` builds can report `notFound` before registration or `requiresApproval` after registration; FlowSound treats `notFound` as a state where registration can still be attempted. Release validation should use the actual distributed app bundle installed in `/Applications`, including its first-launch approval and permission prompts.
 
 ## Testing
 
@@ -167,7 +167,7 @@ ls dist/$(cat VERSION)/test/
 
 Release packaging fails if the built bundle version does not match `VERSION` or if `CHANGELOG.md` does not contain a matching release section.
 
-Unsigned release archives are useful for development and testers. Public releases should be signed with a Developer ID Application certificate and notarized by Apple. A local `Apple Development` certificate is not enough for the normal public Gatekeeper experience.
+Official releases use ad-hoc signing and manual installation by default. Developer ID signing and notarization are optional distribution choices, not prerequisites for an official version. Stable packaging retains version, tag, branch, architecture, signature-integrity and checksum checks; see [the release process](CONTRIBUTING.md#release-process).
 
 FlowSound is a menu bar app. It does not appear in the Dock and does not open a main window on launch. After opening it, look for the FlowSound glyph in the macOS menu bar.
 
@@ -177,7 +177,7 @@ If the process is running but no menu bar item is visible, check the diagnostics
 cat ~/Library/Logs/FlowSound/FlowSound.log
 ```
 
-On macOS 26, System Settings > Menu Bar > Allow in the Menu Bar is not a reliable way to discover this development build. FlowSound is currently launched from `.build/FlowSound.app`, is not installed as a login item, and is not packaged as a signed release app. The app should still create an `NSStatusItem` while running, but the settings list may not include it.
+On macOS 26, System Settings > Menu Bar > Allow in the Menu Bar is not a reliable way to discover a local development build launched from `.build/FlowSound.app` without login-item registration. The app should still create an `NSStatusItem` while running, but the settings list may not include it.
 
 The menu bar icon uses generated transparent template assets extracted from the wave-and-note glyphs. macOS tints these assets automatically for light and dark menu bars. The activated icon comes from `FlowSound-iCon.png`; the deactivated icon comes from `FlowSound-Deactivate-iCon.png`.
 

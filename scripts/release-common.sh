@@ -70,7 +70,6 @@ validate_release_options() {
     if [[ "$RELEASE_CHANNEL" == stable ]]; then
         [[ "$CONFIGURATION" == release && "$ARCHITECTURES" == universal ]] ||
             fail 'Stable packages require release configuration and universal architectures.'
-        [[ -n "$SIGN_IDENTITY" && "$NOTARIZE" == 1 ]] || fail 'Stable packages require Developer ID signing and notarization.'
         validate_stable_source
     fi
 }

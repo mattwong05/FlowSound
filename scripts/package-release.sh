@@ -59,7 +59,7 @@ if [[ -n "$SIGN_IDENTITY" ]]; then
         fail 'Signed app is missing the Apple Events entitlement.'; exit 1
     }
 else
-    print 'Building an ad-hoc signed test archive; public distribution requires RELEASE_CHANNEL=stable.'
+    print -- "Building an ad-hoc signed $RELEASE_CHANNEL archive. Manual Gatekeeper approval is required; this archive is not notarized."
 fi
 ditto -c -k --keepParent "$APP_DIR" "$ARCHIVE_PATH"
 if [[ "$NOTARIZE" == 1 ]]; then
@@ -86,6 +86,16 @@ sed "s/VERSION/$VERSION/g" "$ROOT_DIR/docs/RELEASE_NOTES_TEMPLATE.md" | while IF
     else
         print -r -- "$line"
     fi
+    if [[ "$line" == "# FlowSound $VERSION" ]]; then
+        print '\n## Distribution\n'
+        if [[ -z "$SIGN_IDENTITY" ]]; then
+            print 'This release is ad-hoc signed and is not notarized. After moving FlowSound.app to Applications, open it once, then use System Settings > Privacy & Security > Open Anyway if macOS blocks it. See INSTALL.md for the manual installation steps.'
+        elif [[ "$NOTARIZE" == 1 ]]; then
+            print 'This release is signed with Developer ID and notarized by Apple.'
+        else
+            print 'This release is signed with Developer ID but is not notarized. macOS may require manual Gatekeeper approval; see INSTALL.md.'
+        fi
+    fi
 done > "$ARTIFACT_DIR/RELEASE_NOTES.md"
 {
     print -- "Version: $VERSION"
@@ -98,6 +108,8 @@ done > "$ARTIFACT_DIR/RELEASE_NOTES.md"
         print -- "$architecture minimum target: $(print -r -- "$BUILD_VERSION_INFO" | awk '$1 == "minos" { print $2 }')"
     done
     print -- "Configuration: $CONFIGURATION"
+    if [[ -n "$SIGN_IDENTITY" ]]; then print 'Signing: Developer ID'
+    else print 'Signing: ad-hoc'; fi
     print -- "Notarized: $NOTARIZE"
     xcodebuild -version
     swift --version 2>&1

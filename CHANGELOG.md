@@ -22,7 +22,7 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 - Added a dedicated Sound pane with native sliders and exact numeric inputs for fade, restore and detection timing.
 - Added a documented native macOS design baseline and repeatable visual acceptance guidance.
 - Added an isolated native preview script for screenshot review and settings draft, persistence and keyboard-focus checks.
-- Added a bilingual website introduction and native screenshots for the 0.18.0 public preview, with separate preview and default-release download links.
+- Added a bilingual website introduction and native screenshots for the 0.18.0 release.
 
 ### Changed
 
@@ -31,12 +31,15 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 - Redesigned Diagnostics with aligned information rows, contextual settings actions and collapsible technical tools, and made About compact.
 - Simplified the native menu bar menu and added the standard Settings keyboard shortcut in the application menu.
 - Updated English and Simplified Chinese copy, semantic light/dark colors, spacing, and control hierarchy while preserving draft Save/Cancel behavior.
+- Made 0.18.0 the official default download on GitHub and the website. Official packages use ad-hoc signing and documented manual first-launch approval; Developer ID signing and notarization remain optional.
+- Kept stable version/tag, clean-tree, branch ancestry, universal architecture and checksum checks; explicitly requested Developer ID signing or notarization still fails on missing credentials or errors.
 
 ### Fixed
 
 - Fixed application removal buttons moving with app-name length and list headings appearing inside the shared scrolling content.
 - Fixed outer scrolling content overlapping list actions, and disclosure controls hiding their labels.
 - Kept keyboard focus in the edited rule column when the same identifier appears in both lists.
+- Made the website header compact, corrected logo sizing, and replaced the wide language buttons with an accessible globe control.
 
 ## [0.17.0] - 2026-09-23
 

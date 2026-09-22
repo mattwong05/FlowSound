@@ -118,11 +118,11 @@ Historical version sections below describe delivered milestones, not verificatio
 - Implemented: session-scoped restore ownership, asynchronous monitor readiness, quiet/deferred-duck handling, bounded script execution, and observable user-intervention handling.
 - Implemented: draft-only app rules, app selection, live diagnostics, bounded logs, audio recovery listeners, CI and protected universal packaging.
 - Verified locally: pure/service/command/lifecycle tests and toolchain builds; see the compatibility matrix for exact evidence.
-- Pending: signed installation and permission attribution, real-player fades, device switching, sleep/wake, and macOS 15/27 runtime acceptance.
+- Pending: distributed-app installation, manual first-launch approval and permission attribution, real-player fades, device switching, sleep/wake, and macOS 15/27 runtime acceptance.
 
 ## 1.0.0 Release Candidate
 
-- Complete the signed/notarized installation and hardware matrix.
+- Complete the ad-hoc installation, manual approval, permission and hardware matrix. Validate Developer ID signing and notarization separately if that optional distribution method is introduced.
 - Validate permission denial/recovery in a fresh macOS account.
 - Measure CPU, energy impact, and actual fade latency during a representative long session.
 - Keep Netease experimental until its menu and approximate volume behavior pass the dedicated matrix.
@@ -132,4 +132,6 @@ Historical version sections below describe delivered milestones, not verificatio
 
 Implemented: native settings toolbar; separate watched/ignored columns; aligned add/remove controls and empty states; dedicated sound controls; compact menu, Diagnostics and About; English/Chinese and light/dark visual review.
 
-Next acceptance: signed installed UI on macOS 26 and 27, VoiceOver, increased contrast/reduced transparency, full keyboard access, and the runtime matrix in `docs/COMPATIBILITY.md`.
+Distribution: 0.18.0 is the official default release, using ad-hoc signing and manual first-launch approval. The website and GitHub share the same download entry.
+
+Next acceptance: the installed distributed UI on macOS 26 and 27, VoiceOver, increased contrast/reduced transparency, full keyboard access, and the runtime matrix in `docs/COMPATIBILITY.md`.

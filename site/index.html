@@ -22,20 +22,28 @@
   <body>
     <header class="site-header">
       <a class="brand" href="#" aria-label="FlowSound">
-        <picture>
-          <source srcset="/assets/flowsound-logo-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="/assets/flowsound-logo-light.png" alt="" width="160" height="88">
-        </picture>
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>FlowSound</span>
       </a>
-      <nav class="nav" aria-label="Primary">
+      <nav class="nav" id="primary-nav" aria-label="Primary">
         <a data-i18n="navWhatsNew" href="#whats-new">What’s new</a>
         <a data-i18n="navDemo" href="#demo">Demo</a>
         <a data-i18n="navPrivacy" href="#privacy">Privacy</a>
         <a data-i18n="navPermissions" href="#permissions">Permissions</a>
       </nav>
-      <div class="language-switch" aria-label="Language">
-        <button type="button" data-lang="en">EN</button>
-        <button type="button" data-lang="zh">中文</button>
+      <div class="header-controls">
+        <div class="language-switch">
+          <button type="button" class="icon-button" id="language-toggle" aria-label="Choose language" data-i18n-label="languageLabel" aria-expanded="false" aria-controls="language-options" title="Language / 语言">
+            <span class="header-icon globe-icon" aria-hidden="true"></span>
+          </button>
+          <div class="language-options" id="language-options" hidden>
+            <button type="button" data-lang="en" lang="en">English</button>
+            <button type="button" data-lang="zh" lang="zh-Hans">简体中文</button>
+          </div>
+        </div>
+        <button type="button" class="icon-button nav-toggle" id="nav-toggle" aria-label="Navigation" data-i18n-label="navigationLabel" aria-expanded="false" aria-controls="primary-nav">
+          <span class="header-icon menu-icon" aria-hidden="true"></span>
+        </button>
       </div>
     </header>
 
@@ -48,15 +56,15 @@
             FlowSound fades and pauses Apple Music or Spotify when other apps play audio, then restores it when things become quiet again. Netease Cloud Music is available as an experimental adapter.
           </p>
           <div class="actions">
-            <a class="button primary" data-i18n="downloadPreview" href="https://github.com/mattwong05/FlowSound/releases/tag/preview-0.18.0">
-              Try 0.18.0 preview
+            <a class="button primary" data-i18n="download" href="https://github.com/mattwong05/FlowSound/releases/latest">
+              Download 0.18.0
             </a>
-            <a class="button secondary" data-i18n="downloadStable" href="https://github.com/mattwong05/FlowSound/releases/latest">
-              Download stable 0.15.1
+            <a class="button secondary" data-i18n="installGuide" href="https://github.com/mattwong05/FlowSound/blob/main/INSTALL.md">
+              Installation guide
             </a>
           </div>
-          <p class="release-note" data-i18n="previewNote">
-            0.18.0 is a public preview, ad-hoc signed and not notarized. macOS may block it on first open. macOS 27 runtime testing is still pending.
+          <p class="release-note" data-i18n="installNote">
+            Independently distributed, without Apple notarization. First launch requires manual approval in System Settings → Privacy &amp; Security.
           </p>
           <p class="note" data-i18n="heroNote">
             Built for macOS 15+. Official Apple Music and Spotify support. Experimental Netease Cloud Music. Local-first, no analytics.
@@ -145,7 +153,7 @@
 
       <section class="section release-section" id="whats-new">
         <div class="section-heading">
-          <p class="eyebrow" data-i18n="releaseEyebrow">New in 0.18.0 · Public preview</p>
+          <p class="eyebrow" data-i18n="releaseEyebrow">New in 0.18.0</p>
           <h2 data-i18n="releaseTitle">A clearer place for every setting.</h2>
           <p data-i18n="releaseText">Native controls, considered spacing, and a simpler way to decide which apps can interrupt your music.</p>
         </div>
@@ -172,7 +180,7 @@
               <h3 data-i18n="reliabilityTitle">Know what’s happening.</h3>
               <p data-i18n="reliabilityText">See monitoring and permission status in Diagnostics. Recovery handles audio-device changes and sleep/wake, while playback controls respect observable manual changes.</p>
             </article>
-            <a class="text-link" data-i18n="releaseNotes" href="https://github.com/mattwong05/FlowSound/releases/tag/preview-0.18.0">Read the preview release notes →</a>
+            <a class="text-link" data-i18n="releaseNotes" href="https://github.com/mattwong05/FlowSound/releases/tag/v0.18.0">Read the release notes →</a>
           </div>
         </div>
       </section>
@@ -272,7 +280,7 @@
           </details>
           <details>
             <summary data-i18n="faqVersionQ">Which version should I download?</summary>
-            <p data-i18n="faqVersionA">Choose the 0.18.0 preview to try the redesigned interface and reliability updates. The previous stable channel remains at 0.15.1. Read each release’s installation notes before opening it.</p>
+            <p data-i18n="faqVersionA">0.18.0 is the current release for both Apple Silicon and Intel Macs. Download the ZIP, move FlowSound to Applications, and follow the installation guide for first-launch approval.</p>
           </details>
           <details>
             <summary data-i18n="faqMacOSQ">Does it work on macOS 26 and 27?</summary>
@@ -281,7 +289,7 @@
           <details>
             <summary data-i18n="faqWarningQ">Why does macOS warn me when opening it?</summary>
             <p data-i18n="faqWarningA">
-              The 0.18.0 preview is ad-hoc signed and not notarized by Apple. Gatekeeper may block it on first open. Review the GitHub release notes and checksum before deciding whether to run it.
+              FlowSound is independently distributed with an ad-hoc signature and no Apple notarization. After verifying the download and trying to open it, use System Settings → Privacy &amp; Security → Open Anyway, then confirm Open. The installation guide includes the full steps.
             </p>
           </details>
         </div>

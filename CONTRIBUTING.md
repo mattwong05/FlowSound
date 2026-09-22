@@ -53,7 +53,7 @@ Run the app:
 open .build/FlowSound.app
 ```
 
-Launch-at-login uses `SMAppService` and should be validated with a signed, installed app bundle before release. Local `.build/FlowSound.app` builds may report `notFound` before registration or `requiresApproval` while macOS is waiting for user approval. Saving Preferences without changing the launch-at-login checkbox must not register another login item.
+Launch-at-login uses `SMAppService` and should be validated with the actual distributed app installed in `/Applications` before release. Local `.build/FlowSound.app` builds may report `notFound` before registration or `requiresApproval` while macOS is waiting for user approval. Saving Preferences without changing the launch-at-login checkbox must not register another login item.
 
 ## Release Process
 
@@ -72,15 +72,21 @@ Default local/test packaging:
 - Existing package directories are rejected. Move a prior output aside explicitly before repeating a package operation. Failed builds preserve previous app/output bundles.
 - Assets are checked in; artwork changes explicitly run `scripts/generate-logo-assets.swift` and `iconutil -c icns -o Assets/FlowSound.icns Assets/FlowSound.iconset`.
 
-Stable packaging requires a clean tree, a tag matching `v$(cat VERSION)` at HEAD, and HEAD to be an ancestor of `origin/main`. Use `RELEASE_CHANNEL=stable`, `RELEASE_TAG`, a Developer ID Application `SIGN_IDENTITY`, and `NOTARIZE=1`. Both signing paths include `packaging/FlowSound.entitlements`; Developer ID signing enables Hardened Runtime. Prefer an existing Keychain notarytool profile via `NOTARYTOOL_PROFILE`; CI can use `APPLE_ID`, `APPLE_TEAM_ID`, and `APPLE_APP_SPECIFIC_PASSWORD` supplied through secrets. Never commit or print credentials.
+Stable packaging requires a clean tree, a tag matching `v$(cat VERSION)` at HEAD, and HEAD to be an ancestor of `origin/main`. Official releases use ad-hoc signing by default and need no Developer ID certificate:
 
-The Release workflow requires certificate/password/keychain/signing identity and Apple notarization secrets for tag-triggered stable releases. `NOTARIZE_RELEASE` is no longer used: stable releases always notarize. Manual workflow runs, including those selected from a tag, only produce test artifacts. Existing GitHub Releases are not overwritten. Public packages are checked with codesign, stapler, spctl, architecture validation, and checksums before publication.
+```sh
+RELEASE_CHANNEL=stable RELEASE_TAG=v0.18.0 NOTARIZE=0 scripts/package-release.sh
+```
 
-CI runs on pull requests and main/dev/codex branches, executing `swift test`, a Release build, universal packaging, and `scripts/test-release.sh`. Toolchain success is not runtime compatibility evidence: signed installation, TCC permissions, real players, and hardware require [the acceptance matrix](docs/COMPATIBILITY.md).
+Use the tag matching the current `VERSION`. Keep `SIGN_IDENTITY` unset for ad-hoc distribution. Both signing paths include `packaging/FlowSound.entitlements`. The generated notes and `BUILD_INFO.txt` must identify the actual signing method and whether notarization completed. Ad-hoc releases guide users through **System Settings > Privacy & Security > Open Anyway**; see [INSTALL.md](INSTALL.md).
 
-### Public previews
+For optional Developer ID distribution, set `SIGN_IDENTITY` to a Developer ID Application identity and `NOTARIZE=1`. Developer ID signing enables Hardened Runtime. Prefer an existing Keychain notarytool profile via `NOTARYTOOL_PROFILE`; CI can use `APPLE_ID`, `APPLE_TEAM_ID`, and `APPLE_APP_SPECIFIC_PASSWORD` supplied through secrets. Explicitly requested signing and notarization must succeed; missing credentials or failures never fall back to ad-hoc publication. Never commit or print credentials.
 
-When publication is authorized but Developer ID signing/notarization is unavailable, a verified `test` artifact may be published explicitly as a GitHub prerelease. Use a `preview-<VERSION>` tag on the reviewed development commit, `gh release create --verify-tag --prerelease --latest=false`, and an explicit ad-hoc/not-notarized notice in the notes and website. Upload the archive, checksum and build information together; do not replace existing assets. `preview-` tags do not trigger the stable `v*.*.*` workflow. Leave the latest stable release and `main` application code unchanged. Website-only updates may be applied to `main` so its existing Cloudflare Pages integration can publish preview information. Stable signing and acceptance gates still apply before promotion.
+The Release workflow creates official releases from `v*.*.*` tags, using ad-hoc signing by default. To opt into Developer ID signing and notarization, set the repository variable `FLOWSOUND_RELEASE_SIGNING=developer-id` and supply the certificate/password/keychain/signing identity and Apple notarization secrets. Manual workflow runs allow an explicit signing-mode choice but only produce test artifacts. Existing GitHub Releases are not overwritten. All packages are checked for signature integrity, universal architecture, version metadata and checksums; stapler and Gatekeeper assessment additionally apply to notarized packages.
+
+CI runs on pull requests and main/dev/codex branches, executing `swift test`, a Release build, universal packaging, and `scripts/test-release.sh`. Toolchain success is not runtime compatibility evidence: manual first launch, TCC permissions, real players, and hardware require [the acceptance matrix](docs/COMPATIBILITY.md).
+
+A release's official status does not imply Developer ID signing or notarization. Keep the website's default download and GitHub's latest official release aligned, and disclose the installation method in both places. Prereleases are reserved for deliberately announced prerelease work, not selected automatically because a Developer ID certificate is unavailable.
 
 ## Website Deployment
 
@@ -133,8 +139,8 @@ Before merging functional changes:
 - Confirm FlowSound skips ducking when the selected music app is paused or stopped before watched audio starts.
 - Manually test Apple Music and Spotify as the selected music app.
 - Confirm disabling the service cancels active fades and timers.
-- For public releases, verify the zip checksum, install from `/Applications`, confirm Gatekeeper opens the app, confirm the app is notarized, and confirm first-run permission prompts are understandable.
-- For unsigned tester releases, unzip the archive and run `codesign --verify --deep --strict --verbose=2 FlowSound.app` before publishing.
+- For all public releases, verify the zip checksum and run `codesign --verify --deep --strict --verbose=2 FlowSound.app` after extraction. Install from `/Applications`, exercise the documented first-launch approval and permission prompts, and record any untested cases.
+- For optional notarized releases, additionally confirm the notarization ticket, stapling and Gatekeeper assessment. Do not apply those claims to ad-hoc packages.
 - For website changes, test light mode, dark mode, English, Simplified Chinese, desktop width, and mobile width before deployment.
 
 ## Versioning

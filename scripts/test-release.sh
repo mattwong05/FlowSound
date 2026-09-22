@@ -50,7 +50,7 @@ expect_failure 'ARCHITECTURES must' run_fixture ARCHITECTURES=all "$PACKAGE" --c
 expect_failure 'RELEASE_CHANNEL must' run_fixture RELEASE_CHANNEL=public "$PACKAGE" --check
 expect_failure 'NOTARIZE must' run_fixture NOTARIZE=yes "$PACKAGE" --check
 expect_failure 'Developer ID Application' run_fixture SIGN_IDENTITY='Apple Development: Fixture' "$PACKAGE" --check
-expect_failure 'Stable packages require Developer ID' run_fixture RELEASE_CHANNEL=stable "$PACKAGE" --check
+expect_failure 'Stable RELEASE_TAG must' run_fixture RELEASE_CHANNEL=stable "$PACKAGE" --check
 expect_failure 'Notarization requires Developer ID' run_fixture NOTARIZE=1 "$PACKAGE" --check
 expect_failure 'Notarization requires NOTARYTOOL_PROFILE' run_fixture NOTARIZE=1 SIGN_IDENTITY='Developer ID Application: Fixture' "$PACKAGE" --check
 printf '01.2.3\n' > "$FIXTURE/VERSION"
@@ -82,10 +82,15 @@ git -C "$FIXTURE" add .
 git -C "$FIXTURE" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'fixture'
 git -C "$FIXTURE" tag v1.2.3
 git -C "$FIXTURE" update-ref refs/remotes/origin/main HEAD
-STABLE_ENV=(RELEASE_CHANNEL=stable RELEASE_TAG=v1.2.3 NOTARIZE=1 \
-    SIGN_IDENTITY='Developer ID Application: Fixture' NOTARYTOOL_PROFILE=fixture)
+STABLE_ENV=(RELEASE_CHANNEL=stable RELEASE_TAG=v1.2.3 NOTARIZE=0)
 run_fixture "${STABLE_ENV[@]}" "$PACKAGE" --check > /dev/null
 (( ++test_count ))
+SIGNED_STABLE_ENV=(RELEASE_CHANNEL=stable RELEASE_TAG=v1.2.3 NOTARIZE=1 \
+    SIGN_IDENTITY='Developer ID Application: Fixture' NOTARYTOOL_PROFILE=fixture)
+run_fixture "${SIGNED_STABLE_ENV[@]}" "$PACKAGE" --check > /dev/null
+(( ++test_count ))
+expect_failure 'Notarization requires Developer ID' run_fixture "${STABLE_ENV[@]}" NOTARIZE=1 "$PACKAGE" --check
+expect_failure 'Notarization requires NOTARYTOOL_PROFILE' run_fixture "${STABLE_ENV[@]}" NOTARIZE=1 SIGN_IDENTITY='Developer ID Application: Fixture' "$PACKAGE" --check
 expect_failure 'Stable RELEASE_TAG must' run_fixture "${STABLE_ENV[@]}" RELEASE_TAG=v1.2.4 "$PACKAGE" --check
 expect_failure 'universal architectures' run_fixture "${STABLE_ENV[@]}" ARCHITECTURES=current "$PACKAGE" --check
 printf '\nUncommitted fixture change\n' >> "$FIXTURE/CHANGELOG.md"
@@ -105,6 +110,7 @@ printf 'old bundle\n' > "$FIXTURE/previous.app/keep.txt"
 cat > "$FIXTURE/mock-bin/swift" <<'MOCK'
 #!/bin/zsh
 set -euo pipefail
+if [[ "$1" == --version ]]; then print 'Swift version fixture'; exit 0; fi
 [[ "${SDKROOT:-}" == "$FLOWSOUND_FIXTURE/mock-sdk" ]] || { print -u2 'SDKROOT was not propagated'; exit 1; }
 if [[ " $* " == *' --show-bin-path '* ]]; then
     print -- "$FLOWSOUND_FIXTURE/mock-products"
@@ -126,12 +132,23 @@ case "$1 $2" in
         print -- "minos ${FIXTURE_MINIMUM_VERSION:-15.0.0}"
         if [[ "$3" == x86_64 ]]; then print -- "sdk ${FIXTURE_INTEL_SDK_VERSION:-27.0.0}"
         else print 'sdk 27.0'; fi ;;
+    'notarytool submit') print -u2 'Fixture notarization failed'; exit 23 ;;
     *) exit 1 ;;
 esac
 MOCK
 cat > "$FIXTURE/mock-bin/codesign" <<'MOCK'
 #!/bin/zsh
 print 'sign called' >> "$FLOWSOUND_FIXTURE/signing.log"
+if [[ " $* " == *' --sign Developer ID Application: Fixture '* && "${FIXTURE_FAIL_SIGNING:-0}" == 1 ]]; then
+    print -u2 'Fixture Developer ID signing failed'; exit 23
+fi
+if [[ "$1" == --display ]]; then
+    cat "$FLOWSOUND_FIXTURE/packaging/FlowSound.entitlements"
+fi
+MOCK
+cat > "$FIXTURE/mock-bin/xcodebuild" <<'MOCK'
+#!/bin/zsh
+print 'Xcode fixture'
 MOCK
 chmod +x "$FIXTURE/mock-bin/"*
 BUILD_ENV=(PATH="$FIXTURE/mock-bin:$PATH" FLOWSOUND_FIXTURE="$FIXTURE" APP_OUTPUT_DIR="$FIXTURE/previous.app")
@@ -141,5 +158,21 @@ expect_failure 'minimum target does not match' run_fixture "${BUILD_ENV[@]}" FIX
 [[ ! -e "$FIXTURE/signing.log" && "$(cat "$FIXTURE/previous.app/keep.txt")" == 'old bundle' ]]
 run_fixture "${BUILD_ENV[@]}" "$FIXTURE/scripts/build-app.sh" release > /dev/null
 [[ -f "$FIXTURE/signing.log" && -f "$FIXTURE/previous.app/Contents/MacOS/FlowSound" ]]
+(( ++test_count ))
+
+# Explicit signing and notarization failures must abort, never turn into an
+# ad-hoc package. These commands still use only the fixture compiler/signers.
+PACKAGE_ENV=(PATH="$FIXTURE/mock-bin:$PATH" FLOWSOUND_FIXTURE="$FIXTURE")
+expect_failure 'Fixture Developer ID signing failed' run_fixture "${PACKAGE_ENV[@]}" \
+    SIGN_IDENTITY='Developer ID Application: Fixture' FIXTURE_FAIL_SIGNING=1 "$PACKAGE"
+[[ ! -e "$FIXTURE/dist/1.2.3/test" && ! -e "$FIXTURE/dist/1.2.3/.test.lock" ]]
+expect_failure 'Fixture notarization failed' run_fixture "${PACKAGE_ENV[@]}" \
+    SIGN_IDENTITY='Developer ID Application: Fixture' NOTARIZE=1 NOTARYTOOL_PROFILE=fixture "$PACKAGE"
+[[ ! -e "$FIXTURE/dist/1.2.3/test" && ! -e "$FIXTURE/dist/1.2.3/.test.lock" ]]
+run_fixture "${PACKAGE_ENV[@]}" "$PACKAGE" > /dev/null
+/usr/bin/grep -Fxq 'Signing: ad-hoc' "$FIXTURE/dist/1.2.3/test/BUILD_INFO.txt"
+/usr/bin/grep -Fxq 'Notarized: 0' "$FIXTURE/dist/1.2.3/test/BUILD_INFO.txt"
+/usr/bin/grep -Fq 'This release is ad-hoc signed and is not notarized.' "$FIXTURE/dist/1.2.3/test/RELEASE_NOTES.md"
+(cd "$FIXTURE/dist/1.2.3/test" && shasum -a 256 -c SHA256SUMS.txt > /dev/null)
 (( ++test_count ))
 print -- "Release safeguards passed ($test_count checks)."

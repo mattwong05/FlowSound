@@ -36,7 +36,8 @@ FlowSound does not record audio, upload data, use analytics, or contact a server
 1. Download and verify the zip.
 2. Unzip `FlowSound-VERSION.zip`.
 3. Move `FlowSound.app` to `/Applications`.
-4. Open FlowSound and approve the permission prompts.
+4. Open FlowSound. For an ad-hoc signed release, if macOS blocks it, go to System Settings > Privacy & Security > Open Anyway, then confirm Open.
+5. Approve the permissions needed by the selected music app.
 
 See `INSTALL.md` for details.
 
@@ -49,5 +50,5 @@ See `INSTALL.md` for details.
 - Apple Music and Spotify are official support paths. Netease Cloud Music is experimental and can break if its menu layout changes.
 - Netease Cloud Music requires Accessibility permission so FlowSound can click its Controls menu. Its volume restore is approximate because Netease exposes relative volume steps instead of an exact readable volume.
 - Adapter profile import/export is local JSON metadata only. FlowSound does not download scripts or make network requests for profiles.
-- Test artifacts are ad-hoc signed and may require manual Gatekeeper approval; stable release packaging requires Developer ID signing and notarization.
+- Official releases are ad-hoc signed by default and require manual Gatekeeper approval. Optional Developer ID signing and notarization are reported in the Distribution section and `BUILD_INFO.txt`.
 - Launch at Login should be validated with signed and installed builds.

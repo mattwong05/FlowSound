@@ -17,7 +17,7 @@ If Accessibility is already enabled but Netease still fails with `-1719` or an a
 
 ## Recommended Install
 
-1. Open the latest GitHub Release.
+1. Open the [latest GitHub Release](https://github.com/mattwong05/FlowSound/releases/latest).
 2. Download the universal arm64/x86_64 `FlowSound-<version>.zip`.
 3. Download `SHA256SUMS.txt`.
 4. Verify the checksum:
@@ -28,7 +28,7 @@ If Accessibility is already enabled but Netease still fails with `-1719` or an a
 
 5. Unzip `FlowSound-<version>.zip`.
 6. Move `FlowSound.app` to `/Applications`.
-7. Open `FlowSound.app`.
+7. Open `FlowSound.app`. If macOS blocks it because the developer cannot be verified, follow the manual approval steps below.
 8. Approve the macOS permission prompts.
 
 FlowSound lives in the menu bar. It does not appear in the Dock.
@@ -44,17 +44,20 @@ macOS may ask for:
 
 FlowSound does not record audio, save captured audio, upload data, or use analytics.
 
-## Unsigned Builds
+## Manual first-launch approval
 
-Unsigned builds are intended for developers and testers. FlowSound ad-hoc signs local app bundles so the bundle is internally consistent, but unsigned release archives may still show Gatekeeper warnings and may require manual approval in System Settings.
+The official FlowSound release uses ad-hoc signing and is not notarized by Apple. This is the project's normal distribution method. Ad-hoc signing checks the bundle's integrity but does not establish a Developer ID identity, so macOS may block the first launch.
 
-If macOS still blocks an unsigned tester build downloaded from GitHub, verify the checksum first, then remove the download quarantine attribute:
+After downloading from the GitHub release and verifying its checksum:
 
-```sh
-xattr -dr com.apple.quarantine /Applications/FlowSound.app
-```
+1. Open `/Applications/FlowSound.app` once and dismiss the blocked-app dialog.
+2. Open **System Settings > Privacy & Security**.
+3. Find the FlowSound blocked-app message, choose **Open Anyway**, and confirm with your password or Touch ID if requested.
+4. Confirm **Open** in the next dialog. FlowSound then appears in the menu bar.
 
-Public releases should be signed with a Developer ID Application certificate and notarized by Apple. A local `Apple Development` certificate is not enough for a smooth public install experience.
+These steps approve this app. See [Apple's instructions for opening an app from an unknown developer](https://support.apple.com/guide/mac-help/mh40616/mac). If the button is unavailable on a managed Mac, its administrator may restrict manual approval.
+
+首次启动如被 macOS 拦截，请先尝试打开一次 FlowSound，再进入“系统设置 → 隐私与安全”，找到 FlowSound 提示并点击“仍要打开”，按提示确认。正式版采用 ad-hoc 签名，未经 Apple 公证；无需关闭系统的 Gatekeeper。
 
 ## Uninstall
 
@@ -70,6 +73,6 @@ Public releases should be signed with a Developer ID Application certificate and
 
 ## Development test artifacts
 
-Local packaging writes `dist/<version>/test/`; these are ad-hoc signed test builds, not notarized public releases. Stable outputs are under `dist/<version>/stable/` and require Developer ID signing and notarization. App architecture and build toolchain are recorded in `BUILD_INFO.txt`.
+Local packaging writes `dist/<version>/test/`. Official stable packaging writes `dist/<version>/stable/`; it is also ad-hoc signed by default. Optional Developer ID signing and notarization must be explicitly configured. The release notes and `BUILD_INFO.txt` identify the distribution method, app architectures and build toolchain.
 
-Use the menu's Diagnostics action for monitoring health, permission shortcuts, and Retry after fixing a reported error. Permissions and player control must be verified in the installed signed app; a successful build or an ad-hoc helper execution does not prove TCC authorization. See [the acceptance matrix](docs/COMPATIBILITY.md).
+Use the menu's Diagnostics action for monitoring health, permission shortcuts, and Retry after fixing a reported error. Permissions and player control must be verified in the installed distributed app; a successful build or an ad-hoc helper execution does not prove TCC authorization. See [the acceptance matrix](docs/COMPATIBILITY.md).
