@@ -7,7 +7,7 @@ FlowSound is designed to be local, simple, and auditable.
 - Detects whether other apps are producing audio.
 - Controls the selected music app through local Apple Events or explicit local adapter commands.
 - Stores Preferences locally with `UserDefaults`.
-- Writes local diagnostic logs to `~/Library/Logs/FlowSound/FlowSound.log`.
+- Writes local diagnostic logs to `~/Library/Logs/FlowSound/FlowSound.log`, retaining at most a 1 MiB current file plus one rotated file. Logs may include app identifiers, process IDs and error messages; captured audio is never logged.
 
 ## What FlowSound Does Not Do
 
@@ -40,3 +40,5 @@ The source code is published at:
 https://github.com/mattwong05/FlowSound
 
 Users can inspect how permissions are used, build FlowSound locally, or compare release artifacts with the tagged source.
+
+The Netease automation helper is a short-lived child of the same signed app executable. It accepts a fixed set of player/menu commands, not arbitrary scripts or adapter-profile code. Opening Diagnostics reads status without requesting new permissions or sending player commands.

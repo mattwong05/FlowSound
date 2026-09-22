@@ -74,6 +74,13 @@ struct FlowSoundSettings: Sendable, Equatable {
     var fadeOutDuration: TimeInterval
     var fadeInDuration: TimeInterval
 
+    func requiresMonitorRestart(comparedTo old: FlowSoundSettings) -> Bool {
+        controlledMusicPlayer != old.controlledMusicPlayer || monitoringMode != old.monitoringMode
+            || watchedBundleIdentifiers != old.watchedBundleIdentifiers
+            || excludedBundleIdentifiers != old.excludedBundleIdentifiers
+            || activeThreshold != old.activeThreshold || activeDuration != old.activeDuration
+    }
+
     static let defaults = FlowSoundSettings(
         languagePreference: .system,
         controlledMusicPlayer: .appleMusic,
@@ -87,7 +94,8 @@ struct FlowSoundSettings: Sendable, Equatable {
             "com.apple.iTunes",
             "com.flowsound.FlowSound",
             "com.apple.usernoted",
-            "com.apple.notificationcenterui"
+            "com.apple.notificationcenterui",
+            "systemsoundserverd"
         ],
         activeThreshold: 0.02,
         activeDuration: 1.0,
@@ -102,6 +110,10 @@ struct FlowSoundSettings: Sendable, Equatable {
         "com.apple.WebKit.WebContent",
         "com.apple.WebKit.Networking",
         "com.apple.SafariPlatformSupport.Helper"
+    ]
+
+    static let knownSystemAudioProcessIdentifiers = [
+        "systemsoundserverd"
     ]
 
     static var defaultExcludedBundleIdentifiers: [String] {
@@ -133,12 +145,12 @@ struct FlowSoundSettings: Sendable, Equatable {
 
     static func validWatchedBundleIdentifiers(_ identifiers: [String]) -> [String] {
         let normalized = normalizedBundleIdentifiers(identifiers)
-        return normalized.isEmpty ? defaults.watchedBundleIdentifiers : normalized
+        return normalized
     }
 
     static func validExcludedBundleIdentifiers(_ identifiers: [String]) -> [String] {
         let normalized = normalizedBundleIdentifiers(identifiers)
-        return normalized.isEmpty ? defaults.excludedBundleIdentifiers : normalized
+        return normalized
     }
 
     static func effectiveExcludedBundleIdentifiers(for settings: FlowSoundSettings, appBundleIdentifier: String? = Bundle.main.bundleIdentifier) -> [String] {
@@ -148,6 +160,12 @@ struct FlowSoundSettings: Sendable, Equatable {
             identifiers.append(appBundleIdentifier)
         }
         return normalizedBundleIdentifiers(identifiers)
+    }
+
+    static func effectiveWatchedBundleIdentifiers(for settings: FlowSoundSettings, appBundleIdentifier: String? = Bundle.main.bundleIdentifier) -> [String] {
+        let excluded = Set(effectiveExcludedBundleIdentifiers(for: settings, appBundleIdentifier: appBundleIdentifier))
+        return expandedWatchedBundleIdentifiers(settings.watchedBundleIdentifiers)
+            .filter { !excluded.contains($0) }
     }
 
     static func expandedWatchedBundleIdentifiers(_ identifiers: [String]) -> [String] {
@@ -166,6 +184,10 @@ struct FlowSoundSettings: Sendable, Equatable {
     }
 
     private static func isValidBundleIdentifier(_ identifier: String) -> Bool {
+        if knownSystemAudioProcessIdentifiers.contains(identifier) {
+            return true
+        }
+
         guard identifier.contains("."),
               !identifier.hasPrefix("."),
               !identifier.hasSuffix("."),

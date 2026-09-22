@@ -64,7 +64,7 @@ Allowed types:
 - `chore`
 - `style`
 
-Final responses must end with proposed commit lines and the files included in each commit.
+Final responses report actual Conventional Commit hashes and relevant file groups. Do not push or publish without user authorization.
 
 ## FlowSound Engineering Rules
 
@@ -82,3 +82,12 @@ Final responses must end with proposed commit lines and the files included in ea
 - Treat audio capture and Apple Events permission failures as explicit app states.
 - Do not resume the selected music app unless FlowSound paused it.
 - Synchronize documentation whenever behavior changes.
+
+## Reliability Validation
+
+- Keep startup/status and signal observations separate; missing samples are not measured silence.
+- Keep IO callbacks off the queue that destroys audio resources; send only scalar measurements across queues.
+- Bind restore ownership to the player and running instance; invalidate stale async generations and honor observable user intervention.
+- Keep the automation helper limited to fixed commands, never caller-supplied scripts.
+- Run `swift test` and `scripts/test-release.sh`; verify universal packaging when release code changes.
+- Update `docs/COMPATIBILITY.md` with distinct compiler, UI-preview, signing/permission, runtime and hardware evidence.

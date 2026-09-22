@@ -30,21 +30,22 @@ import Testing
     #expect(FlowSoundSettings.defaults.fadeInDuration == 2.0)
 }
 
-@Test func emptyWatchedBundleIdentifiersFallBackToDefaults() {
+@Test func emptyWatchedBundleIdentifiersRemainEmpty() {
     let identifiers = FlowSoundSettings.validWatchedBundleIdentifiers([])
 
-    #expect(identifiers == FlowSoundSettings.defaults.watchedBundleIdentifiers)
+    #expect(identifiers.isEmpty)
 }
 
 @Test func defaultExcludedBundleIdentifiersContainAppleMusicAndNotificationServices() {
     #expect(FlowSoundSettings.defaultExcludedBundleIdentifiers.contains("com.apple.Music"))
     #expect(FlowSoundSettings.defaultExcludedBundleIdentifiers.contains("com.apple.usernoted"))
+    #expect(FlowSoundSettings.defaultExcludedBundleIdentifiers.contains("systemsoundserverd"))
 }
 
-@Test func emptyExcludedBundleIdentifiersFallBackToDefaults() {
+@Test func emptyExcludedBundleIdentifiersRemainEmpty() {
     let identifiers = FlowSoundSettings.validExcludedBundleIdentifiers([])
 
-    #expect(identifiers == FlowSoundSettings.defaultExcludedBundleIdentifiers)
+    #expect(identifiers.isEmpty)
 }
 
 @Test func safariWatchedBundleIdentifierExpandsToWebKitAudioHelpers() {
@@ -54,6 +55,19 @@ import Testing
     #expect(identifiers.contains("com.apple.WebKit.GPU"))
     #expect(identifiers.contains("com.apple.WebKit.WebContent"))
     #expect(identifiers.contains("com.apple.WebKit.Networking"))
+}
+
+@Test func excludedBundleIdentifiersOverrideExpandedWatchedSafariHelpers() {
+    var settings = FlowSoundSettings.defaults
+    settings.monitoringMode = .watchedApps
+    settings.watchedBundleIdentifiers = ["com.apple.Safari"]
+    settings.excludedBundleIdentifiers = ["com.apple.WebKit.GPU"]
+
+    let identifiers = FlowSoundSettings.effectiveWatchedBundleIdentifiers(for: settings, appBundleIdentifier: "com.flowsound.FlowSound")
+
+    #expect(identifiers.contains("com.apple.Safari"))
+    #expect(!identifiers.contains("com.apple.WebKit.GPU"))
+    #expect(identifiers.contains("com.apple.WebKit.WebContent"))
 }
 
 @Test func spotifyControlledPlayerAddsSpotifyToEffectiveExclusions() {
@@ -161,4 +175,22 @@ import Testing
     store.settings = settings
 
     #expect(publishedSettings?.watchedBundleIdentifiers == ["com.example.VideoApp"])
+}
+
+@Test @MainActor func explicitlyEmptyRulesPersistWhileMissingRulesUseDefaults() {
+    let name = "FlowSoundSettingsTests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: name)!
+    defer { defaults.removePersistentDomain(forName: name) }
+    let store = FlowSoundSettingsStore(defaults: defaults)
+    #expect(store.settings.watchedBundleIdentifiers == FlowSoundSettings.defaults.watchedBundleIdentifiers)
+    var settings = store.settings
+    settings.watchedBundleIdentifiers = []
+    settings.excludedBundleIdentifiers = []
+    store.settings = settings
+    let reopened = FlowSoundSettingsStore(defaults: defaults)
+    #expect(reopened.settings.watchedBundleIdentifiers.isEmpty)
+    #expect(reopened.settings.excludedBundleIdentifiers.isEmpty)
+    #expect(FlowSoundSettings.effectiveWatchedBundleIdentifiers(for: reopened.settings).isEmpty)
+    #expect(FlowSoundSettings.effectiveExcludedBundleIdentifiers(for: reopened.settings, appBundleIdentifier: "com.flowsound.FlowSound").contains("com.flowsound.FlowSound"))
+    #expect(FlowSoundSettings.effectiveExcludedBundleIdentifiers(for: reopened.settings).contains("com.apple.Music"))
 }

@@ -2,6 +2,7 @@ import Foundation
 
 enum DuckingState: Sendable, Equatable {
     case disabled
+    case starting
     case listening
     case ducking
     case pausedByFlowSound
@@ -16,6 +17,8 @@ enum DuckingState: Sendable, Equatable {
         switch self {
         case .disabled:
             FlowSoundStrings.text(.deactivated)
+        case .starting:
+            FlowSoundStrings.text(.starting)
         case .listening:
             FlowSoundStrings.text(.activated)
         case .ducking:
@@ -32,6 +35,9 @@ enum DuckingState: Sendable, Equatable {
 
 enum DuckingEvent: Sendable, Equatable {
     case enable
+    case monitorReady
+    case resumePaused
+    case controlRelinquished
     case disable
     case watchedAudioStarted
     case watchedAudioStopped
@@ -48,7 +54,13 @@ struct DuckingStateMachine: Sendable {
         switch (state, event) {
         case (_, .disable):
             state = .disabled
-        case (.disabled, .enable):
+        case (.disabled, .enable), (.error, .enable):
+            state = .starting
+        case (.starting, .resumePaused):
+            state = .pausedByFlowSound
+        case (.starting, .monitorReady):
+            state = .listening
+        case (.ducking, .controlRelinquished), (.restoring, .controlRelinquished):
             state = .listening
         case (.listening, .watchedAudioStarted):
             state = .ducking
@@ -66,8 +78,6 @@ struct DuckingStateMachine: Sendable {
             state = .listening
         case (_, .failed(let message)):
             state = .error(message)
-        case (.error, .enable):
-            state = .listening
         default:
             break
         }

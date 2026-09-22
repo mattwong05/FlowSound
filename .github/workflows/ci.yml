@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev, 'codex/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      EXPECTED_XCODE_MAJOR: ${{ vars.FLOWSOUND_XCODE_MAJOR || '26' }}
+      EXPECTED_XCODE_VERSION: ${{ vars.FLOWSOUND_XCODE_VERSION }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate selected toolchain
+        run: scripts/check-toolchain.sh
+      - name: Validate packaging safeguards
+        run: scripts/test-release.sh
+      - name: Run tests
+        run: swift test
+      - name: Compile release
+        run: swift build -c release
+      - name: Build universal app and verify both architectures
+        run: scripts/build-app.sh release

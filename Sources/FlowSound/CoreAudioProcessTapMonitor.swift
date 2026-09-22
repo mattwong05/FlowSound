@@ -1,104 +1,138 @@
+import AppKit
 import CoreAudio
 import Foundation
 
 final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchecked Sendable {
     var onActivityChanged: (@MainActor (AudioActivity) -> Void)?
+    var onStatusChanged: (@MainActor (AudioMonitorStatus) -> Void)?
 
     private let queue = DispatchQueue(label: "com.flowsound.process-tap-monitor")
+    // Core Audio dispatches IO blocks synchronously. Never stop/destroy IO on this queue.
+    private let ioQueue = DispatchQueue(label: "com.flowsound.process-tap-samples", qos: .userInitiated)
+    private let callbackGeneration = AudioCallbackGeneration()
     private var tapID = AudioObjectID(kAudioObjectUnknown)
     private var aggregateDeviceID = AudioObjectID(kAudioObjectUnknown)
     private var ioProcID: AudioDeviceIOProcID?
     private var timer: DispatchSourceTimer?
     private var settings = FlowSoundSettings.defaults
     private var isRunning = false
+    private var wantsMonitoring = false
+    private var isSleeping = false
     private var currentActivity: AudioActivity = .quiet
-    private var activeCandidateStartedAt: TimeInterval?
-    private var lastAudibleAt: TimeInterval?
-    private var tapFormat: AudioStreamBasicDescription?
+    private var detector = AudioSignalDetector()
     private var sessionID: UUID?
     private var monitoringMode = FlowSoundSettings.defaults.monitoringMode
-    private var expandedWatchedBundleIdentifiers = FlowSoundSettings.expandedWatchedBundleIdentifiers(FlowSoundSettings.defaults.watchedBundleIdentifiers)
-    private var excludedBundleIdentifiers = FlowSoundSettings.defaultExcludedBundleIdentifiers
-    private var lastActivityLogAt: TimeInterval = 0
+    private var expandedWatchedBundleIdentifiers: [String] = []
+    private var excludedBundleIdentifiers: [String] = []
     private var lastMatchedProcessLogAt: TimeInterval = 0
     private var lastPollAt: TimeInterval = 0
-    private var lastProcessOutputSignalAt: TimeInterval = 0
+    private var lastPCMSampleAt: TimeInterval?
+    private var captureHealth = AudioCaptureHealth()
+    private var usingProcessFallback = false
+    private var hasVerifiedFallbackQuiet = false
+    private var lastPollHadMatchedOutput = false
+    private var legacyProcessIDs: Set<AudioObjectID> = []
+    private var recoveryWork: DispatchWorkItem?
+    private var propertyListeners: [(AudioObjectID, AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = []
+    private let workspaceCenter: NotificationCenter
+    private var workspaceObservers: [NSObjectProtocol] = []
+    private let lifecycle: AudioTapLifecycle?
+    private var lifecycleNeedsCleanup = false
+    private let recoveryDelays: [TimeInterval]
 
-    func start(settings: FlowSoundSettings) throws {
-        let sessionID = UUID()
-        let expandedBundleIDs = FlowSoundSettings.expandedWatchedBundleIdentifiers(settings.watchedBundleIdentifiers)
-        let excludedBundleIDs = Self.excludedBundleIdentifiers(settings: settings)
-        FlowSoundDiagnostics.log(Self.startLogMessage(settings: settings, expandedBundleIDs: expandedBundleIDs, excludedBundleIDs: excludedBundleIDs))
-        queue.async { [weak self] in
-            guard let self else { return }
-            self.cleanupOnQueue(emitQuiet: false)
-            self.sessionID = sessionID
-            self.settings = settings
-            self.monitoringMode = settings.monitoringMode
-            self.expandedWatchedBundleIdentifiers = expandedBundleIDs
-            self.excludedBundleIdentifiers = excludedBundleIDs
-            self.isRunning = true
-
-            do {
-                try self.startOnQueue(settings: settings, sessionID: sessionID)
-            } catch {
-                FlowSoundDiagnostics.log("Core Audio process tap setup failed: \(error.localizedDescription)")
-                self.cleanupOnQueue(emitQuiet: true)
+    @MainActor
+    init(lifecycle: AudioTapLifecycle? = nil, recoveryDelays: [TimeInterval] = [0.35, 1, 2]) {
+        self.lifecycle = lifecycle
+        self.recoveryDelays = recoveryDelays.isEmpty ? [0.35, 1, 2] : recoveryDelays
+        workspaceCenter = NSWorkspace.shared.notificationCenter
+        guard lifecycle == nil else { return }
+        workspaceObservers.append(workspaceCenter.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: nil) { [weak self] _ in
+            self?.queue.async { [weak self] in self?.suspendForSleep() }
+        })
+        workspaceObservers.append(workspaceCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: nil) { [weak self] _ in
+            self?.queue.async { [weak self] in
+                guard let self else { return }
+                self.isSleeping = false
+                self.captureHealth = AudioCaptureHealth()
+                self.scheduleRecovery(reason: "system wake")
             }
+        })
+    }
+
+    deinit {
+        for observer in workspaceObservers { workspaceCenter.removeObserver(observer) }
+    }
+
+    func start(settings: FlowSoundSettings) async throws {
+        try Task.checkCancellation()
+        let requestID = callbackGeneration.replace()
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            queue.async {
+                guard self.callbackGeneration.isCurrent(requestID) else {
+                    continuation.resume(throwing: CancellationError())
+                    return
+                }
+                self.cleanupOnQueue()
+                self.sessionID = requestID
+                self.settings = settings
+                self.monitoringMode = settings.monitoringMode
+                self.expandedWatchedBundleIdentifiers = FlowSoundSettings.effectiveWatchedBundleIdentifiers(for: settings)
+                self.excludedBundleIdentifiers = Self.excludedBundleIdentifiers(settings: settings)
+                self.wantsMonitoring = true
+                self.isSleeping = false
+                self.captureHealth = AudioCaptureHealth()
+                self.emitStatus(.starting)
+                do {
+                    try self.startOnQueue(settings: settings, sessionID: requestID)
+                    self.emitStatus(.running)
+                    continuation.resume()
+                } catch {
+                    self.cleanupOnQueue()
+                    self.wantsMonitoring = false
+                    self.emitStatus(.failed(error.localizedDescription))
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+        if Task.isCancelled {
+            if callbackGeneration.isCurrent(requestID) { stop() }
+            throw CancellationError()
         }
     }
 
     func stop() {
+        let requestID = callbackGeneration.replace()
         queue.async { [weak self] in
-            self?.cleanupOnQueue(emitQuiet: true)
+            guard let self, self.callbackGeneration.isCurrent(requestID) else { return }
+            self.sessionID = requestID
+            self.wantsMonitoring = false
+            self.cleanupOnQueue()
+            self.emit(.quiet)
+            self.emitStatus(.stopped)
         }
     }
 
     func simulateActive() {
-        emit(.active)
+        queue.async { [weak self] in
+            guard let self, self.isRunning else { return }
+            self.emit(.active)
+        }
     }
 
     func simulateQuiet() {
-        emit(.quiet)
-    }
-
-    private func process(_ inputData: UnsafePointer<AudioBufferList>) {
-        guard isRunning else { return }
-        let rms = calculateRMS(inputData)
-        recordAudioSignal(rms: rms, source: "tap")
-    }
-
-    private func calculateRMS(_ inputData: UnsafePointer<AudioBufferList>) -> Double {
-        let buffers = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: inputData))
-        var sumOfSquares = 0.0
-        var sampleCount = 0
-
-        for buffer in buffers {
-            guard let data = buffer.mData, buffer.mDataByteSize > 0 else { continue }
-            let byteCount = Int(buffer.mDataByteSize)
-
-            if tapFormat?.mFormatID == kAudioFormatLinearPCM,
-               tapFormat?.mFormatFlags ?? 0 & kAudioFormatFlagIsFloat != 0 {
-                let count = byteCount / MemoryLayout<Float32>.stride
-                let samples = data.assumingMemoryBound(to: Float32.self)
-                for index in 0..<count {
-                    let sample = Double(samples[index])
-                    sumOfSquares += sample * sample
-                }
-                sampleCount += count
-            } else {
-                let count = byteCount / MemoryLayout<Int16>.stride
-                let samples = data.assumingMemoryBound(to: Int16.self)
-                for index in 0..<count {
-                    let sample = Double(samples[index]) / Double(Int16.max)
-                    sumOfSquares += sample * sample
-                }
-                sampleCount += count
-            }
+        queue.async { [weak self] in
+            guard let self, self.isRunning else { return }
+            self.emit(.quiet)
         }
+    }
 
-        guard sampleCount > 0 else { return 0 }
-        return sqrt(sumOfSquares / Double(sampleCount))
+    private func process(_ measurement: PCMMeasurement, sampledAt now: TimeInterval, sessionID: UUID) {
+        guard isRunning, self.sessionID == sessionID, callbackGeneration.isCurrent(sessionID) else { return }
+        lastPCMSampleAt = now
+        usingProcessFallback = false
+        hasVerifiedFallbackQuiet = false
+        if captureHealth.recordSample(now: now) { emitStatus(.running) }
+        recordAudioSignal(rms: measurement.rms, now: now)
     }
 
     private func startQuietTimer() {
@@ -112,7 +146,17 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
     }
 
     private func startOnQueue(settings: FlowSoundSettings, sessionID: UUID) throws {
-        let watchedBundleIdentifiers = FlowSoundSettings.expandedWatchedBundleIdentifiers(settings.watchedBundleIdentifiers)
+        guard callbackGeneration.isCurrent(sessionID) else { throw CancellationError() }
+        if let lifecycle {
+            lifecycleNeedsCleanup = true
+            try lifecycle.start(settings)
+            guard callbackGeneration.isCurrent(sessionID) else { throw CancellationError() }
+            isRunning = true
+            detector = AudioSignalDetector()
+            lastPCMSampleAt = nil
+            return
+        }
+        let watchedBundleIdentifiers = FlowSoundSettings.effectiveWatchedBundleIdentifiers(for: settings)
         let excludedBundleIdentifiers = Self.excludedBundleIdentifiers(settings: settings)
         let description = try makeTapDescription(
             settings: settings,
@@ -126,9 +170,9 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
 
         var createdTapID = AudioObjectID(kAudioObjectUnknown)
         try check(AudioHardwareCreateProcessTap(description, &createdTapID), operation: "AudioHardwareCreateProcessTap")
-        guard self.sessionID == sessionID else {
+        guard self.sessionID == sessionID, callbackGeneration.isCurrent(sessionID) else {
             AudioHardwareDestroyProcessTap(createdTapID)
-            return
+            throw CancellationError()
         }
         tapID = createdTapID
 
@@ -152,32 +196,44 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
             AudioHardwareCreateAggregateDevice(aggregateDescription as CFDictionary, &createdAggregateDeviceID),
             operation: "AudioHardwareCreateAggregateDevice"
         )
-        guard self.sessionID == sessionID else {
+        guard self.sessionID == sessionID, callbackGeneration.isCurrent(sessionID) else {
             AudioHardwareDestroyAggregateDevice(createdAggregateDeviceID)
-            return
+            throw CancellationError()
         }
         aggregateDeviceID = createdAggregateDeviceID
-        tapFormat = try readTapFormat(tapID)
+        let format = try readTapFormat(tapID)
 
         var createdIOProcID: AudioDeviceIOProcID?
         let block: AudioDeviceIOBlock = { [weak self] _, inputData, _, _, _ in
-            self?.process(inputData)
+            guard let measurement = PCMAnalyzer.measure(inputData, format: format) else { return }
+            let now = ProcessInfo.processInfo.systemUptime
+            self?.queue.async { [weak self] in
+                self?.process(measurement, sampledAt: now, sessionID: sessionID)
+            }
         }
         try check(
-            AudioDeviceCreateIOProcIDWithBlock(&createdIOProcID, aggregateDeviceID, queue, block),
+            AudioDeviceCreateIOProcIDWithBlock(&createdIOProcID, aggregateDeviceID, ioQueue, block),
             operation: "AudioDeviceCreateIOProcIDWithBlock"
         )
-        guard self.sessionID == sessionID else {
+        guard self.sessionID == sessionID, callbackGeneration.isCurrent(sessionID) else {
             if let createdIOProcID {
                 AudioDeviceDestroyIOProcID(createdAggregateDeviceID, createdIOProcID)
             }
-            return
+            throw CancellationError()
         }
         ioProcID = createdIOProcID
 
-        startQuietTimer()
         FlowSoundDiagnostics.log("Core Audio process tap starting device IO")
         try check(AudioDeviceStart(aggregateDeviceID, ioProcID), operation: "AudioDeviceStart")
+        isRunning = true
+        detector = AudioSignalDetector()
+        lastPCMSampleAt = nil
+        usingProcessFallback = false
+        hasVerifiedFallbackQuiet = false
+        lastPollHadMatchedOutput = false
+        captureHealth.beginSession(now: ProcessInfo.processInfo.systemUptime)
+        try installPropertyListeners(sessionID: sessionID)
+        startQuietTimer()
         FlowSoundDiagnostics.log(Self.startedLogMessage(settings: settings, watchedBundleIDs: watchedBundleIdentifiers, excludedBundleIDs: excludedBundleIdentifiers))
     }
 
@@ -211,92 +267,162 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
             processIDs = try processObjectIDs(matching: Set(watchedBundleIdentifiers))
             description = CATapDescription(stereoMixdownOfProcesses: processIDs)
         }
+        legacyProcessIDs = Set(processIDs)
         description.name = "FlowSound Watched Apps"
         FlowSoundDiagnostics.log("Core Audio process tap using process IDs for macOS 15-25: \(processIDs.map(String.init).joined(separator: ", "))")
         return description
     }
 
-    private func cleanupOnQueue(emitQuiet shouldEmitQuiet: Bool) {
+    private func cleanupOnQueue() {
+        isRunning = false
+        recoveryWork?.cancel()
+        recoveryWork = nil
         timer?.cancel()
         timer = nil
-
+        if lifecycleNeedsCleanup {
+            lifecycle?.stop()
+            lifecycleNeedsCleanup = false
+        }
+        for (objectID, var address, block) in propertyListeners {
+            AudioObjectRemovePropertyListenerBlock(objectID, &address, queue, block)
+        }
+        propertyListeners.removeAll()
         if aggregateDeviceID != kAudioObjectUnknown, let ioProcID {
             AudioDeviceStop(aggregateDeviceID, ioProcID)
             AudioDeviceDestroyIOProcID(aggregateDeviceID, ioProcID)
         }
-
-        if aggregateDeviceID != kAudioObjectUnknown {
-            AudioHardwareDestroyAggregateDevice(aggregateDeviceID)
-        }
-
-        if tapID != kAudioObjectUnknown {
-            AudioHardwareDestroyProcessTap(tapID)
-        }
-
+        if aggregateDeviceID != kAudioObjectUnknown { AudioHardwareDestroyAggregateDevice(aggregateDeviceID) }
+        if tapID != kAudioObjectUnknown { AudioHardwareDestroyProcessTap(tapID) }
         tapID = AudioObjectID(kAudioObjectUnknown)
         aggregateDeviceID = AudioObjectID(kAudioObjectUnknown)
         ioProcID = nil
-        tapFormat = nil
-        sessionID = nil
-        isRunning = false
-        currentActivity = .quiet
-        monitoringMode = FlowSoundSettings.defaults.monitoringMode
-        activeCandidateStartedAt = nil
-        lastAudibleAt = nil
-        lastActivityLogAt = 0
+        detector = AudioSignalDetector()
         lastMatchedProcessLogAt = 0
         lastPollAt = 0
-        lastProcessOutputSignalAt = 0
-
-        if shouldEmitQuiet {
-            emit(.quiet)
-        }
+        lastPCMSampleAt = nil
     }
 
     private func checkQuietTimeout() {
+        guard isRunning else { return }
         pollRunningOutputProcessesIfNeeded()
-        guard currentActivity == .active else { return }
         let now = ProcessInfo.processInfo.systemUptime
-        let lastAudibleAt = lastAudibleAt ?? now
-        if now - lastAudibleAt >= FlowSoundConstants.monitorQuietReleaseDuration {
-            activeCandidateStartedAt = nil
-            emit(.quiet)
+        // A missing callback is not a silent measurement.
+        if let lastPCMSampleAt, now - lastPCMSampleAt <= 0.25,
+           let activity = detector.checkQuiet(now: now) { emit(activity) }
+        switch captureHealth.check(now: now, hasOutput: lastPollHadMatchedOutput) {
+        case .waitForSamples:
+            if !hasVerifiedFallbackQuiet { emitStatus(.starting) }
+        case .recover:
+            scheduleRecovery(reason: "capture samples stopped arriving")
+        case .fail:
+            cleanupOnQueue()
+            wantsMonitoring = false
+            emitStatus(.failed("Audio capture is not delivering samples. Check System Audio Capture permission and the output device, then enable FlowSound again."))
+        case nil:
+            break
         }
     }
 
-    private func emit(_ activity: AudioActivity) {
-        guard currentActivity != activity else { return }
+    private func emit(_ activity: AudioActivity, force: Bool = false) {
+        guard let sessionID, force || currentActivity != activity else { return }
         currentActivity = activity
-        FlowSoundDiagnostics.log("Core Audio activity changed: \(activity == .active ? "active" : "quiet")")
-        Task { @MainActor [onActivityChanged] in
-            onActivityChanged?(activity)
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.callbackGeneration.isCurrent(sessionID) else { return }
+            self.onActivityChanged?(activity)
         }
     }
 
-    private func recordAudioSignal(rms: Double, source: String) {
-        let now = ProcessInfo.processInfo.systemUptime
+    private func emitStatus(_ status: AudioMonitorStatus) {
+        guard let sessionID else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.callbackGeneration.isCurrent(sessionID) else { return }
+            self.onStatusChanged?(status)
+        }
+    }
 
-        if rms >= settings.activeThreshold {
-            lastAudibleAt = now
-            if activeCandidateStartedAt == nil {
-                activeCandidateStartedAt = now
-                FlowSoundDiagnostics.log("Core Audio active candidate started from \(source), rms=\(Self.format(rms)), threshold=\(Self.format(settings.activeThreshold))")
-            } else if now - lastActivityLogAt >= 2.0 {
-                lastActivityLogAt = now
-                FlowSoundDiagnostics.log("Core Audio audible from \(source), rms=\(Self.format(rms)), threshold=\(Self.format(settings.activeThreshold))")
-            }
+    private func recordAudioSignal(rms: Double, now: TimeInterval = ProcessInfo.processInfo.systemUptime) {
+        if let activity = detector.record(rms: rms, threshold: settings.activeThreshold, activeDuration: settings.activeDuration, now: now) {
+            if usingProcessFallback { emitStatus(.running) }
+            emit(activity, force: true)
+        }
+    }
 
-            if currentActivity != .active,
-               let startedAt = activeCandidateStartedAt,
-               now - startedAt >= settings.activeDuration {
-                emit(.active)
+    private func installPropertyListeners(sessionID: UUID) throws {
+        try listen(objectID: AudioObjectID(kAudioObjectSystemObject), selector: kAudioHardwarePropertyDefaultOutputDevice, sessionID: sessionID)
+        try listen(objectID: tapID, selector: kAudioTapPropertyFormat, sessionID: sessionID)
+        var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultOutputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        var deviceID = AudioObjectID(kAudioObjectUnknown)
+        var size = UInt32(MemoryLayout<AudioObjectID>.size)
+        try check(AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &deviceID), operation: "Read default output device")
+        if deviceID != kAudioObjectUnknown {
+            try listen(objectID: deviceID, selector: kAudioDevicePropertyNominalSampleRate, sessionID: sessionID)
+            try listen(objectID: deviceID, selector: kAudioDevicePropertyDeviceIsAlive, sessionID: sessionID)
+        }
+        if #unavailable(macOS 26.0) {
+            try listen(objectID: AudioObjectID(kAudioObjectSystemObject), selector: kAudioHardwarePropertyProcessObjectList, sessionID: sessionID)
+        }
+    }
+
+    private func listen(objectID: AudioObjectID, selector: AudioObjectPropertySelector, sessionID: UUID) throws {
+        var address = AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+            guard let self, self.sessionID == sessionID, self.callbackGeneration.isCurrent(sessionID) else { return }
+            if selector == kAudioHardwarePropertyProcessObjectList {
+                let identifiers = self.monitoringMode == .watchedApps ? self.expandedWatchedBundleIdentifiers : self.excludedBundleIdentifiers
+                guard let current = try? self.processObjectIDs(matching: Set(identifiers)), Set(current) != self.legacyProcessIDs else { return }
             }
-        } else if currentActivity != .active {
-            let lastSignalAt = max(lastAudibleAt ?? 0, lastProcessOutputSignalAt)
-            if lastSignalAt == 0 || now - lastSignalAt > FlowSoundConstants.activeCandidateResetDuration {
-                activeCandidateStartedAt = nil
+            self.handleConfigurationChange()
+        }
+        try check(AudioObjectAddPropertyListenerBlock(objectID, &address, queue, block), operation: "Listen for audio configuration changes")
+        propertyListeners.append((objectID, address, block))
+    }
+
+    private func suspendForSleep() {
+        isSleeping = true
+        guard wantsMonitoring else { return }
+        sessionID = callbackGeneration.replace()
+        cleanupOnQueue()
+        emitStatus(.recovering)
+    }
+
+    /// The same entry point is used by Core Audio listeners and device-free lifecycle tests.
+    func handleConfigurationChange() {
+        let token = callbackGeneration.current()
+        queue.async { [weak self] in
+            guard let self, self.callbackGeneration.isCurrent(token) else { return }
+            self.scheduleRecovery(reason: "audio configuration changed")
+        }
+    }
+
+    private func scheduleRecovery(reason: String) {
+        guard wantsMonitoring, !isSleeping, recoveryWork == nil else { return }
+        let token = callbackGeneration.replace()
+        sessionID = token
+        isRunning = false
+        emitStatus(.recovering)
+        FlowSoundDiagnostics.log("Audio monitoring recovering: \(reason)")
+        scheduleRecoveryAttempt(sessionID: token, attempt: 1, delay: recoveryDelays[0])
+    }
+
+    private func scheduleRecoveryAttempt(sessionID: UUID, attempt: Int, delay: TimeInterval) {
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, self.wantsMonitoring, !self.isSleeping, self.callbackGeneration.isCurrent(sessionID) else { return }
+            self.cleanupOnQueue()
+            do {
+                try self.startOnQueue(settings: self.settings, sessionID: sessionID)
+                self.emitStatus(.running)
+            } catch {
+                self.cleanupOnQueue()
+                if attempt < self.recoveryDelays.count {
+                    self.scheduleRecoveryAttempt(sessionID: sessionID, attempt: attempt + 1, delay: self.recoveryDelays[attempt])
+                } else {
+                    self.wantsMonitoring = false
+                    self.emitStatus(.failed(error.localizedDescription))
+                }
             }
         }
+        recoveryWork = work
+        queue.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     private func pollRunningOutputProcessesIfNeeded() {
@@ -312,7 +438,18 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
             let matches = outputProcesses.filter {
                 isWatchedProcess(bundleID: $0.bundleID, watched: watched, excluded: excluded)
             }
-            guard !matches.isEmpty else { return }
+            lastPollHadMatchedOutput = !matches.isEmpty
+            guard !matches.isEmpty else {
+                // A successful process query confirms the fallback's output source stopped.
+                // This is distinct from inferring silence from missing PCM callbacks.
+                if usingProcessFallback, let activity = detector.checkQuiet(now: now) {
+                    emitStatus(.running)
+                    emit(activity)
+                    usingProcessFallback = false
+                    hasVerifiedFallbackQuiet = true
+                }
+                return
+            }
 
             if now - lastMatchedProcessLogAt >= 3.0 {
                 lastMatchedProcessLogAt = now
@@ -322,13 +459,13 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
                 FlowSoundDiagnostics.log("Core Audio matched watched output process: \(description)")
             }
 
-            if monitoringMode == .watchedApps {
-                // Some apps, including Safari, output through helper processes whose tap buffers can
-                // be delayed or silent until the helper is included. Treat active output IO as a
-                // conservative fallback signal in watched-app-only mode. All-apps mode should rely on
-                // RMS from the exclusive tap so stale process-output state does not stretch quiet time.
-                lastProcessOutputSignalAt = now
-                recordAudioSignal(rms: max(settings.activeThreshold, 0.001), source: "process-output")
+            if monitoringMode == .watchedApps,
+               lastPCMSampleAt.map({ now - $0 > 1.0 }) ?? true {
+                // Output IO is only a fallback when fresh PCM is unavailable, never an
+                // override of a real silent buffer from the tap.
+                usingProcessFallback = true
+                hasVerifiedFallbackQuiet = false
+                recordAudioSignal(rms: max(settings.activeThreshold, 0.001))
             }
         } catch {
             if now - lastMatchedProcessLogAt >= 10.0 {
@@ -499,7 +636,7 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
         var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
         let status = AudioObjectGetPropertyData(tapID, &address, 0, nil, &size, &format)
         try check(status, operation: "AudioObjectGetPropertyData(kAudioTapPropertyFormat)")
-        guard format.mBytesPerFrame > 0 else { throw AudioActivityMonitorError.invalidFormat }
+        guard PCMAnalyzer.isSupported(format) else { throw AudioActivityMonitorError.invalidFormat }
         FlowSoundDiagnostics.log("Core Audio tap format: channels=\(format.mChannelsPerFrame), sampleRate=\(format.mSampleRate), bytesPerFrame=\(format.mBytesPerFrame), flags=\(format.mFormatFlags)")
         return format
     }
@@ -510,25 +647,8 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
         }
     }
 
-    private static func format(_ value: Double) -> String {
-        String(format: "%.4f", value)
-    }
-
     private static func excludedBundleIdentifiers(settings: FlowSoundSettings) -> [String] {
         FlowSoundSettings.effectiveExcludedBundleIdentifiers(for: settings)
-    }
-
-    private static func startLogMessage(
-        settings: FlowSoundSettings,
-        expandedBundleIDs: [String],
-        excludedBundleIDs: [String]
-    ) -> String {
-        switch settings.monitoringMode {
-        case .allNonMusic:
-            "Core Audio process tap setup scheduled for all apps except \(excludedBundleIDs.joined(separator: ", "))"
-        case .watchedApps:
-            "Core Audio process tap setup scheduled for \(expandedBundleIDs.joined(separator: ", "))"
-        }
     }
 
     private static func startedLogMessage(
@@ -545,7 +665,7 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
     }
 
     private static func fourCharacterCode(_ selector: AudioObjectPropertySelector) -> String {
-        let value = UInt32(selector).bigEndian
+        let value = UInt32(selector)
         let characters: [UInt8] = [
             UInt8((value >> 24) & 0xff),
             UInt8((value >> 16) & 0xff),
@@ -562,4 +682,36 @@ final class CoreAudioProcessTapMonitor: SimulatableAudioActivityMonitor, @unchec
 private struct AudioProcessSnapshot {
     var pid: pid_t
     var bundleID: String
+}
+
+/// Invalidates already-enqueued main-actor callbacks synchronously on stop/restart.
+final class AudioCallbackGeneration: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = UUID()
+
+    func replace() -> UUID {
+        lock.lock()
+        defer { lock.unlock() }
+        value = UUID()
+        return value
+    }
+
+    func isCurrent(_ candidate: UUID) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return value == candidate
+    }
+
+    func current() -> UUID {
+        lock.lock()
+        defer { lock.unlock() }
+        return value
+    }
+}
+
+/// A small lifecycle seam lets tests exercise failure, cleanup, cancellation and retries
+/// without creating taps, recording audio or touching the user's audio devices.
+struct AudioTapLifecycle: Sendable {
+    let start: @Sendable (FlowSoundSettings) throws -> Void
+    let stop: @Sendable () -> Void
 }

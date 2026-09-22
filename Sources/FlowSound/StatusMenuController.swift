@@ -8,12 +8,11 @@ final class StatusMenuController {
     private let statusItem = NSStatusBar.system.statusItem(withLength: 28)
     private let menu = NSMenu()
     private let aboutWindowController = AboutWindowController()
-    private let diagnosticsWindowController = StartupWindowController()
-    private lazy var preferencesWindowController = PreferencesWindowController(settingsStore: settingsStore)
+    private lazy var diagnosticsWindowController = StartupWindowController(service: service, activityMonitor: activityMonitor, settingsStore: settingsStore)
+    private lazy var preferencesWindowController = PreferencesWindowController(settingsStore: settingsStore, service: service, activityMonitor: activityMonitor)
     private let statusMenuItem = NSMenuItem(title: FlowSoundStrings.text(.status(FlowSoundStrings.text(.deactivated))), action: nil, keyEquivalent: "")
     private let toggleMenuItem = NSMenuItem(title: FlowSoundStrings.text(.menuActivate), action: #selector(toggleEnabled), keyEquivalent: "")
-    private let simulateActiveItem = NSMenuItem(title: FlowSoundStrings.text(.menuSimulateActive), action: #selector(simulateActive), keyEquivalent: "")
-    private let simulateQuietItem = NSMenuItem(title: FlowSoundStrings.text(.menuSimulateQuiet), action: #selector(simulateQuiet), keyEquivalent: "")
+    private let diagnosticsMenuItem = NSMenuItem(title: FlowSoundStrings.text(.menuShowDiagnostics), action: #selector(showDiagnostics), keyEquivalent: "")
     private let preferencesMenuItem = NSMenuItem(title: FlowSoundStrings.text(.menuPreferences), action: #selector(showPreferences), keyEquivalent: ",")
     private let aboutMenuItem = NSMenuItem(title: FlowSoundStrings.text(.menuAbout), action: #selector(showAbout), keyEquivalent: "")
 
@@ -64,8 +63,7 @@ final class StatusMenuController {
 
     private func configureMenu() {
         toggleMenuItem.target = self
-        simulateActiveItem.target = self
-        simulateQuietItem.target = self
+        diagnosticsMenuItem.target = self
         preferencesMenuItem.target = self
         aboutMenuItem.target = self
 
@@ -73,8 +71,7 @@ final class StatusMenuController {
         menu.addItem(.separator())
         menu.addItem(toggleMenuItem)
         menu.addItem(.separator())
-        menu.addItem(simulateActiveItem)
-        menu.addItem(simulateQuietItem)
+        menu.addItem(diagnosticsMenuItem)
         menu.addItem(.separator())
         menu.addItem(preferencesMenuItem)
         menu.addItem(aboutMenuItem)
@@ -85,12 +82,20 @@ final class StatusMenuController {
     }
 
     private func render(_ state: DuckingState) {
-        let label = state.label(playerName: settingsStore.settings.controlledMusicPlayer.displayName)
+        let label: String
+        switch service.monitorStatus {
+        case .starting:
+            label = FlowSoundStrings.text(.monitorStarting)
+        case .recovering:
+            label = FlowSoundStrings.text(.monitorRecovering)
+        case .failed(let message):
+            label = FlowSoundStrings.text(.diagnosticFailure(message))
+        case .running, .stopped:
+            label = state.label(playerName: settingsStore.settings.controlledMusicPlayer.displayName)
+        }
         FlowSoundDiagnostics.log("render state: \(label)")
         statusMenuItem.title = FlowSoundStrings.text(.status(label))
         toggleMenuItem.title = state == .disabled ? FlowSoundStrings.text(.menuActivate) : FlowSoundStrings.text(.menuDeactivate)
-        simulateActiveItem.isEnabled = state != .disabled
-        simulateQuietItem.isEnabled = state != .disabled
 
         if let button = statusItem.button {
             button.toolTip = "FlowSound: \(label)"
@@ -101,8 +106,7 @@ final class StatusMenuController {
     private func refreshMenuTitles() {
         preferencesMenuItem.title = FlowSoundStrings.text(.menuPreferences)
         aboutMenuItem.title = FlowSoundStrings.text(.menuAbout)
-        simulateActiveItem.title = FlowSoundStrings.text(.menuSimulateActive)
-        simulateQuietItem.title = FlowSoundStrings.text(.menuSimulateQuiet)
+        diagnosticsMenuItem.title = FlowSoundStrings.text(.menuShowDiagnostics)
         menu.items.last?.title = FlowSoundStrings.text(.menuQuit)
     }
 
@@ -114,14 +118,6 @@ final class StatusMenuController {
         }
     }
 
-    @objc private func simulateActive() {
-        activityMonitor.simulateActive()
-    }
-
-    @objc private func simulateQuiet() {
-        activityMonitor.simulateQuiet()
-    }
-
     @objc private func showAbout() {
         aboutWindowController.show()
     }
@@ -130,7 +126,7 @@ final class StatusMenuController {
         preferencesWindowController.show()
     }
 
-    func showDiagnostics() {
+    @objc func showDiagnostics() {
         diagnosticsWindowController.show()
     }
 

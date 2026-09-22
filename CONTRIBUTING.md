@@ -3,10 +3,9 @@
 ## Development Setup
 
 1. Use macOS 15 or newer.
-2. Install Xcode with a recent macOS SDK. Release builds currently use Xcode 26.
-3. Install Xcode Command Line Tools.
-4. Initialize Git before implementation work begins.
-5. Open the Xcode project once it exists and confirm signing settings.
+2. Install Xcode 26 or newer with Swift 6.2 or newer and Command Line Tools.
+3. Open `Package.swift` in Xcode or use the SwiftPM commands below. No generated Xcode project is required.
+4. Run `scripts/check-toolchain.sh`. CI validates the selected toolchain; repository variables `FLOWSOUND_XCODE_MAJOR` (default 26) and optional `FLOWSOUND_XCODE_VERSION` pin expectations without guessing installed paths.
 
 Optional tools:
 
@@ -54,45 +53,22 @@ Use `main` for the last stable public release. New product features and release-
 
 Release builds are created with `scripts/package-release.sh`.
 
-Default behavior:
+Default local/test packaging:
 
-- Builds `FlowSound.app` with SwiftPM release configuration.
-- Reads `VERSION` and injects it into the generated bundle `Info.plist`.
-- Fails if `CFBundleShortVersionString` or `CFBundleVersion` does not match `VERSION`.
-- Fails if `CHANGELOG.md` does not contain a matching release section.
-- Creates `dist/FlowSound-<version>.zip`.
-- Creates `dist/SHA256SUMS.txt`.
-- Creates `dist/RELEASE_NOTES.md` from `docs/RELEASE_NOTES_TEMPLATE.md` and the matching `CHANGELOG.md` version section.
+- `scripts/package-release.sh --check` validates options/version/changelog without creating output.
+- `scripts/package-release.sh` builds a universal arm64/x86_64, ad-hoc signed test package under `dist/<VERSION>/test/`.
+- `ARCHITECTURES=current scripts/build-app.sh` provides a faster local host-only build. Public stable packages require universal architecture.
+- `APP_OUTPUT_DIR=/absolute/new/path/FlowSound.app scripts/build-app.sh release` builds a separate app bundle for review.
+- Each package contains the zip, `SHA256SUMS.txt`, `RELEASE_NOTES.md`, and `BUILD_INFO.txt`.
+- Build processes receive the selected Xcode SDK through a local `SDKROOT` value and explicit Clang sysroot arguments, including when SwiftBuild filters the environment. Before signing, each Mach-O slice must report that SDK and the macOS 15 minimum target; both are recorded in `BUILD_INFO.txt`.
+- Existing package directories are rejected. Move a prior output aside explicitly before repeating a package operation. Failed builds preserve previous app/output bundles.
+- Assets are checked in; artwork changes explicitly run `scripts/generate-logo-assets.swift` and `iconutil -c icns -o Assets/FlowSound.icns Assets/FlowSound.iconset`.
 
-Optional signed and notarized behavior:
+Stable packaging requires a clean tree, a tag matching `v$(cat VERSION)` at HEAD, and HEAD to be an ancestor of `origin/main`. Use `RELEASE_CHANNEL=stable`, `RELEASE_TAG`, a Developer ID Application `SIGN_IDENTITY`, and `NOTARIZE=1`. Both signing paths include `packaging/FlowSound.entitlements`; Developer ID signing enables Hardened Runtime. Prefer an existing Keychain notarytool profile via `NOTARYTOOL_PROFILE`; CI can use `APPLE_ID`, `APPLE_TEAM_ID`, and `APPLE_APP_SPECIFIC_PASSWORD` supplied through secrets. Never commit or print credentials.
 
-- Set `SIGN_IDENTITY` to a Developer ID Application identity.
-- Set `NOTARIZE=1`.
-- Set `APPLE_ID`, `APPLE_TEAM_ID`, and `APPLE_APP_SPECIFIC_PASSWORD`.
+The Release workflow requires certificate/password/keychain/signing identity and Apple notarization secrets for tag-triggered stable releases. `NOTARIZE_RELEASE` is no longer used: stable releases always notarize. Manual workflow runs, including those selected from a tag, only produce test artifacts. Existing GitHub Releases are not overwritten. Public packages are checked with codesign, stapler, spctl, architecture validation, and checksums before publication.
 
-Example:
-
-```sh
-SIGN_IDENTITY="Developer ID Application: Example (TEAMID)" \
-NOTARIZE=1 \
-APPLE_ID="developer@example.com" \
-APPLE_TEAM_ID="TEAMID" \
-APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx" \
-scripts/package-release.sh
-```
-
-An `Apple Development` certificate is for local development and is not sufficient for public Developer ID distribution. Public releases should use a paid Apple Developer Program Developer ID Application certificate.
-
-GitHub Actions can build release artifacts from tags. Configure these repository secrets before enabling signed releases:
-
-- `DEVELOPER_ID_CERTIFICATE_BASE64`
-- `DEVELOPER_ID_CERTIFICATE_PASSWORD`
-- `DEVELOPER_ID_SIGN_IDENTITY`
-- `KEYCHAIN_PASSWORD`
-- `NOTARIZE_RELEASE`
-- `APPLE_ID`
-- `APPLE_TEAM_ID`
-- `APPLE_APP_SPECIFIC_PASSWORD`
+CI runs on pull requests and main/dev/codex branches, executing `swift test`, a Release build, universal packaging, and `scripts/test-release.sh`. Toolchain success is not runtime compatibility evidence: signed installation, TCC permissions, real players, and hardware require [the acceptance matrix](docs/COMPATIBILITY.md).
 
 ## Website Deployment
 
@@ -136,6 +112,9 @@ Before merging functional changes:
 - Play audio in a few apps and confirm Preferences > Tools lists recent audio sources with bundle identifiers and statuses.
 - Change the Preferences language selection and confirm the Preferences and menu titles rebuild in the selected language.
 - Save Preferences repeatedly while launch-at-login requires approval and confirm System Settings does not gain duplicate login items.
+- Change raw rules, use a recent-source action or app picker, then Cancel; confirm persisted rules remain unchanged. Repeat with Save and verify exclusion precedence.
+- Confirm language/fade-only edits do not restart the tap.
+- Exercise delayed duck completion, disabled player changes, stale callbacks, missing samples, and monitor recovery with test doubles before hardware tests.
 - Interrupt a restore by starting watched audio again during fade-in, then confirm the selected music app eventually returns to the original pre-duck volume.
 - Confirm the selected music app does not resume when the user paused it manually.
 - Confirm FlowSound skips ducking when the selected music app is paused or stopped before watched audio starts.
@@ -159,7 +138,7 @@ Non-trivial changes must update:
 - `CHANGELOG.md`
 - User-facing docs affected by the change
 
-Before publishing a GitHub Release, run `scripts/package-release.sh` from a clean tree and inspect the generated `dist/RELEASE_NOTES.md`. Do not publish or replace release assets if the app bundle metadata, archive name, changelog section, and release notes do not all refer to the same version.
+Before publishing a GitHub Release, run the stable packaging command described above from a clean tree and inspect `dist/<VERSION>/stable/RELEASE_NOTES.md`. Do not publish or replace release assets if the app bundle metadata, archive name, changelog section, and release notes do not all refer to the same version.
 
 ## Commit Style
 

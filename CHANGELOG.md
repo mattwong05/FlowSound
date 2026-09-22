@@ -14,6 +14,47 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ### Removed
 
+## [0.17.0] - 2026-09-23
+
+### Added
+
+- Added live diagnostics for monitoring, player automation, Accessibility, login items, and restore countdowns, with retry and permission settings shortcuts.
+- Added native application selection with app names/icons and draft-only watched/excluded rules; kept raw identifiers as an advanced editor.
+- Added bounded audio-monitor recovery for output device/format changes, sleep/wake, and legacy process-list changes.
+- Added regression tests for asynchronous control, signal timing, PCM formats, process cancellation, settings drafts, and release safeguards.
+- Added PR/development CI, universal arm64/x86_64 packaging, build provenance, and a macOS compatibility acceptance matrix.
+
+### Changed
+
+- Changed monitoring startup to report actual readiness and errors, with session-scoped callbacks and fresh signal observations after restart.
+- Changed all Preferences changes, including recent-source actions, app removal and Reset, to require Save; Cancel discards drafts. Explicitly empty app lists now remain empty after saving instead of returning to defaults.
+- Changed official-player fades to one bounded script process per fade. Netease UI scripts run on the main thread of a short-lived copy of the signed app executable, keeping the menu app responsive.
+- Changed restore ownership to track the selected player and running instance, rejecting stale results and observable manual playback/volume changes.
+- Changed logs to serialized asynchronous writes with one 1 MiB current file and one rotated file.
+- Changed public releases to require Developer ID signing, the Apple Events entitlement, notarization, matching version/tag metadata, and stable-branch ancestry. Manual workflow runs only create test artifacts.
+- Changed artifact output to `dist/<version>/<test|stable>/`; existing output and public release assets are never silently replaced.
+
+### Fixed
+
+- Fixed music remaining paused when the quiet deadline expires during the initial fade-out.
+- Fixed old restore volumes crossing into a different player selected while FlowSound is disabled.
+- Fixed initialization errors being hidden behind an activated status and quiet synchronization being lost when monitoring rules change.
+- Fixed PCM format flag interpretation, partial probe initialization cleanup, and stale/missing samples being counted as confirmed silence.
+- Fixed unrelated language/fade settings restarting the audio tap and login-item errors being overwritten by a form refresh.
+- Fixed packaging SDK metadata by explicitly passing the selected SDK to build processes and verifying both Mach-O slices, while keeping the macOS 15 deployment target.
+
+## [0.16.0] - 2026-04-28
+
+### Added
+
+- Added quick actions in Preferences > Tools for adding recently detected audio source bundle identifiers directly to Watched apps or Excluded apps.
+- Added default handling for the `systemsoundserverd` Core Audio system process so macOS system sound output can be excluded from FlowSound monitoring.
+
+### Changed
+
+- Changed watched-app monitoring so Excluded apps override Safari helper expansion such as WebKit audio processes.
+- Changed Monitoring bundle identifier editors to support standard paste and undo shortcuts.
+
 ## [0.15.1] - 2026-04-28
 
 ### Fixed

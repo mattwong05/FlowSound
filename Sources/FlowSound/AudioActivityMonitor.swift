@@ -5,16 +5,32 @@ enum AudioActivity: Sendable, Equatable {
     case quiet
 }
 
-protocol AudioActivityMonitor: AnyObject {
-    var onActivityChanged: (@MainActor (AudioActivity) -> Void)? { get set }
+enum AudioMonitorStatus: Sendable, Equatable {
+    case stopped
+    case starting
+    case running
+    case recovering
+    case failed(String)
+}
 
-    func start(settings: FlowSoundSettings) throws
-    func stop()
+protocol AudioActivityMonitor: AnyObject {
+    @MainActor var onActivityChanged: (@MainActor (AudioActivity) -> Void)? { get set }
+    @MainActor var onStatusChanged: (@MainActor (AudioMonitorStatus) -> Void)? { get set }
+
+    @MainActor func start(settings: FlowSoundSettings) async throws
+    @MainActor func stop()
+}
+
+extension AudioActivityMonitor {
+    @MainActor var onStatusChanged: (@MainActor (AudioMonitorStatus) -> Void)? {
+        get { nil }
+        set { }
+    }
 }
 
 protocol SimulatableAudioActivityMonitor: AudioActivityMonitor {
-    func simulateActive()
-    func simulateQuiet()
+    @MainActor func simulateActive()
+    @MainActor func simulateQuiet()
 }
 
 enum AudioActivityMonitorError: LocalizedError {
@@ -40,7 +56,7 @@ enum AudioActivityMonitorError: LocalizedError {
     }
 
     private static func fourCharacterCode(_ status: OSStatus) -> String {
-        let value = UInt32(bitPattern: status.bigEndian)
+        let value = UInt32(bitPattern: status)
         let characters: [UInt8] = [
             UInt8((value >> 24) & 0xff),
             UInt8((value >> 16) & 0xff),
@@ -54,7 +70,7 @@ enum AudioActivityMonitorError: LocalizedError {
     }
 }
 
-final class ManualAudioActivityMonitor: SimulatableAudioActivityMonitor {
+@MainActor final class ManualAudioActivityMonitor: SimulatableAudioActivityMonitor {
     var onActivityChanged: (@MainActor (AudioActivity) -> Void)?
 
     private(set) var isRunning = false

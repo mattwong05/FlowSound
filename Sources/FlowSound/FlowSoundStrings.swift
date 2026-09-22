@@ -49,6 +49,41 @@ enum FlowSoundLanguagePreference: String, Sendable, Equatable, CaseIterable {
 
 enum FlowSoundStrings {
     enum Key {
+        case draftSettingsHelp
+        case cancel
+        case chooseApplications
+        case removeApplicationRule
+        case fixedExclusionsHelp
+        case addApplications
+        case chooseWatchedApplications
+        case chooseExcludedApplications
+        case applicationMissingIdentifier
+        case applicationRulesHelp
+        case diagnosticsTitle
+        case monitorStopped
+        case monitorStarting
+        case monitorRunning
+        case monitorRecovering
+        case notVerified
+        case diagnosticMonitor
+        case diagnosticAutomation
+        case diagnosticAccessibility
+        case diagnosticSignal
+        case diagnosticSignalActive
+        case diagnosticSignalQuiet
+        case diagnosticMixHelp
+        case permissionAllowed
+        case permissionNotAllowed
+        case permissionNotNeeded
+        case openAudioCaptureSettings
+        case openAutomationSettings
+        case retryService
+        case advancedDiagnostics
+        case simulationHelp
+        case restoreNotScheduled
+        case restoreCountdown(Int)
+        case automationSucceeded(String)
+        case diagnosticFailure(String)
         case aboutDetail
         case aboutTitle
         case activeDuration
@@ -56,6 +91,7 @@ enum FlowSoundStrings {
         case activeThreshold
         case activeThresholdHelp
         case activated
+        case starting
         case advanced
         case advancedHelp
         case advancedToggleHide
@@ -65,6 +101,8 @@ enum FlowSoundStrings {
         case appStatusWatched
         case appStatusDetected
         case appStatusSelectedMusic
+        case addToExcludedApps
+        case addToWatchedApps
         case adapterProfiles
         case adapterProfilesHelp
         case exportBundledAdapterProfile
@@ -150,6 +188,77 @@ enum FlowSoundStrings {
 
     private static func english(_ key: Key) -> String {
         switch key {
+        case .draftSettingsHelp:
+            "Changes on all tabs, including app rules and Reset Defaults, apply after Save. Cancel discards them."
+        case .cancel:
+            "Cancel"
+        case .removeApplicationRule:
+            "Remove"
+        case .fixedExclusionsHelp:
+            "These are editable rules. The selected music app and FlowSound always stay excluded, even if removed from this list."
+        case .chooseApplications:
+            "Choose Applications"
+        case .addApplications:
+            "Add"
+        case .chooseWatchedApplications:
+            "Add Watched Apps…"
+        case .chooseExcludedApplications:
+            "Add Excluded Apps…"
+        case .applicationMissingIdentifier:
+            "An app has no valid bundle identifier. No apps were added; use the advanced bundle filters for helpers and system processes."
+        case .applicationRulesHelp:
+            "Choose installed apps by name and icon. Watched rules apply only in watched-app mode; exclusions take priority in both modes."
+        case .diagnosticsTitle:
+            "FlowSound Diagnostics"
+        case .monitorStopped:
+            "Stopped"
+        case .monitorStarting:
+            "Starting audio capture…"
+        case .monitorRunning:
+            "Audio tap running (permission is not independently verified)"
+        case .monitorRecovering:
+            "Recovering audio capture…"
+        case .notVerified:
+            "Not yet verified"
+        case .diagnosticMonitor:
+            "Audio capture"
+        case .diagnosticAutomation:
+            "Player automation"
+        case .diagnosticAccessibility:
+            "Accessibility"
+        case .diagnosticSignal:
+            "Detection signal"
+        case .diagnosticSignalActive:
+            "Active audio signal"
+        case .diagnosticSignalQuiet:
+            "Quiet signal"
+        case .diagnosticMixHelp:
+            "The tap measures mixed audio. Recent output processes help configure rules, but do not prove which app caused a pause."
+        case .permissionAllowed:
+            "Allowed"
+        case .permissionNotAllowed:
+            "Not allowed"
+        case .permissionNotNeeded:
+            "Not required for this player"
+        case .openAudioCaptureSettings:
+            "Audio Capture Settings"
+        case .openAutomationSettings:
+            "Automation Settings"
+        case .retryService:
+            "Retry Monitoring"
+        case .advancedDiagnostics:
+            "Advanced Diagnostics"
+        case .simulationHelp:
+            "Simulation controls the selected music app. It does not verify audio capture or permissions."
+        case .restoreNotScheduled:
+            "No restore scheduled"
+        case .restoreCountdown(let seconds):
+            "Restoring in \(seconds) seconds"
+        case .automationSucceeded(let time):
+            "Last successful command: \(time)"
+        case .diagnosticFailure(let message):
+            "Failed: \(message)"
+
         case .aboutDetail:
             "A menu bar controller for fading music around other app audio."
         case .aboutTitle:
@@ -162,6 +271,8 @@ enum FlowSoundStrings {
             "Active threshold"
         case .activeThresholdHelp:
             "RMS level needed to count audio as active. Default: 0.02"
+        case .starting:
+            "Starting…"
         case .activated:
             "Activated"
         case .advanced:
@@ -182,6 +293,10 @@ enum FlowSoundStrings {
             "Detected"
         case .appStatusSelectedMusic:
             "Selected music app"
+        case .addToExcludedApps:
+            "Exclude"
+        case .addToWatchedApps:
+            "Watch"
         case .adapterProfiles:
             "Adapter Profiles"
         case .adapterProfilesHelp:
@@ -217,7 +332,7 @@ enum FlowSoundStrings {
         case .excludedApps:
             "Excluded apps"
         case .excludedAppsHelp:
-            "Ignored in all-apps mode. One bundle identifier per line."
+            "Exclusions take priority in both modes. One bundle identifier or known system audio process per line."
         case .fadeIn:
             "Fade in"
         case .fadeInHelp:
@@ -289,7 +404,7 @@ enum FlowSoundStrings {
         case .recentAudioSourcesEmpty:
             "No audio sources detected in the last 3 minutes. Start audio in another app, then refresh this panel."
         case .recentAudioSourcesHelp:
-            "Shows Core Audio processes that recently reported output. Use these bundle identifiers in Watched apps or Excluded apps when needed."
+            "Recent output processes are clues, not exact attribution of mixed audio. Watch/Exclude edits the draft; click Save to apply."
         case .refresh:
             "Refresh"
         case .resetDefaults:
@@ -319,11 +434,11 @@ enum FlowSoundStrings {
         case .toolsDiagnosticsHelp:
             "Open the diagnostics window or copy the local log path."
         case .watchedAndExcludedHelp:
-            "Use these raw bundle identifiers for browser helpers, notification daemons, and apps FlowSound cannot identify from a normal app picker."
+            "Use these raw identifiers for browser helpers, system audio services, notification daemons, and apps FlowSound cannot identify from a normal app picker."
         case .watchedApps:
             "Watched apps"
         case .watchedAppsHelp:
-            "Used only in watched-app mode. One bundle identifier per line."
+            "Used only in watched-app mode. One bundle identifier or known system audio process per line."
         case .version(let version):
             "Version \(version)"
         }
@@ -331,6 +446,77 @@ enum FlowSoundStrings {
 
     private static func simplifiedChinese(_ key: Key) -> String {
         switch key {
+        case .draftSettingsHelp:
+            "所有页面的修改（包括应用规则和恢复默认）均在保存后生效。取消会放弃修改。"
+        case .cancel:
+            "取消"
+        case .removeApplicationRule:
+            "移除"
+        case .fixedExclusionsHelp:
+            "这里显示可编辑规则。所选音乐应用和 FlowSound 始终被排除，即使从列表移除也不会被监听。"
+        case .chooseApplications:
+            "选择应用"
+        case .addApplications:
+            "添加"
+        case .chooseWatchedApplications:
+            "添加监听应用…"
+        case .chooseExcludedApplications:
+            "添加忽略应用…"
+        case .applicationMissingIdentifier:
+            "所选应用缺少有效的 Bundle Identifier，本次未添加。辅助进程和系统进程可使用高级 Bundle 过滤器。"
+        case .applicationRulesHelp:
+            "可按名称和图标选择已安装应用。监听列表仅在白名单模式下生效；忽略规则在两种模式下均优先。"
+        case .diagnosticsTitle:
+            "FlowSound 诊断"
+        case .monitorStopped:
+            "已停止"
+        case .monitorStarting:
+            "正在启动音频采集…"
+        case .monitorRunning:
+            "音频 Tap 正在运行（未单独验证权限）"
+        case .monitorRecovering:
+            "正在恢复音频采集…"
+        case .notVerified:
+            "尚未验证"
+        case .diagnosticMonitor:
+            "音频采集"
+        case .diagnosticAutomation:
+            "播放器自动化"
+        case .diagnosticAccessibility:
+            "辅助功能"
+        case .diagnosticSignal:
+            "检测信号"
+        case .diagnosticSignalActive:
+            "有声信号"
+        case .diagnosticSignalQuiet:
+            "安静信号"
+        case .diagnosticMixHelp:
+            "Tap 检测的是混合音频。最近输出进程可辅助配置规则，但不能证明具体哪个应用触发了暂停。"
+        case .permissionAllowed:
+            "已允许"
+        case .permissionNotAllowed:
+            "未允许"
+        case .permissionNotNeeded:
+            "当前播放器不需要"
+        case .openAudioCaptureSettings:
+            "音频采集设置"
+        case .openAutomationSettings:
+            "自动化设置"
+        case .retryService:
+            "重试监听"
+        case .advancedDiagnostics:
+            "高级诊断"
+        case .simulationHelp:
+            "模拟会控制所选音乐应用，不代表音频采集或权限已通过验证。"
+        case .restoreNotScheduled:
+            "尚未安排恢复"
+        case .restoreCountdown(let seconds):
+            "将在 \(seconds) 秒后恢复"
+        case .automationSucceeded(let time):
+            "最近命令成功：\(time)"
+        case .diagnosticFailure(let message):
+            "失败：\(message)"
+
         case .aboutDetail:
             "在其他 App 播放声音时，自动淡出并暂停音乐的菜单栏工具。"
         case .aboutTitle:
@@ -343,6 +529,8 @@ enum FlowSoundStrings {
             "声音阈值"
         case .activeThresholdHelp:
             "超过这个 RMS 音量才算有声。默认：0.02"
+        case .starting:
+            "正在启动…"
         case .activated:
             "已启用"
         case .advanced:
@@ -363,6 +551,10 @@ enum FlowSoundStrings {
             "已检测到"
         case .appStatusSelectedMusic:
             "当前音乐 App"
+        case .addToExcludedApps:
+            "忽略"
+        case .addToWatchedApps:
+            "监听"
         case .adapterProfiles:
             "适配器配置"
         case .adapterProfilesHelp:
@@ -398,7 +590,7 @@ enum FlowSoundStrings {
         case .excludedApps:
             "忽略的 App"
         case .excludedAppsHelp:
-            "在全局监听模式下忽略。每行一个 Bundle Identifier。"
+            "忽略规则在两种模式下均优先。每行一个 Bundle Identifier 或已知系统音频进程。"
         case .fadeIn:
             "淡入"
         case .fadeInHelp:
@@ -470,7 +662,7 @@ enum FlowSoundStrings {
         case .recentAudioSourcesEmpty:
             "最近 3 分钟没有检测到发声源。请先在其他 App 播放声音，然后刷新这里。"
         case .recentAudioSourcesHelp:
-            "显示最近向 Core Audio 报告输出的进程。需要时可把这些 Bundle Identifier 填入监听或忽略列表。"
+            "最近输出进程仅作为线索，不能精确归因混合音频。监听/忽略按钮修改草稿，点击保存后生效。"
         case .refresh:
             "刷新"
         case .resetDefaults:
@@ -500,11 +692,11 @@ enum FlowSoundStrings {
         case .toolsDiagnosticsHelp:
             "打开诊断窗口，或复制本地日志路径。"
         case .watchedAndExcludedHelp:
-            "用于浏览器辅助进程、通知服务，以及 FlowSound 无法从普通 App 识别的特殊 Bundle Identifier。"
+            "用于浏览器辅助进程、系统音频服务、通知服务，以及 FlowSound 无法从普通 App 识别的特殊标识。"
         case .watchedApps:
             "监听的 App"
         case .watchedAppsHelp:
-            "仅在白名单模式下使用。每行一个 Bundle Identifier。"
+            "仅在白名单模式下使用。每行一个 Bundle Identifier 或已知系统音频进程。"
         case .version(let version):
             "版本 \(version)"
         }

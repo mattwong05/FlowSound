@@ -18,7 +18,7 @@ If Accessibility is already enabled but Netease still fails with `-1719` or an a
 ## Recommended Install
 
 1. Open the latest GitHub Release.
-2. Download `FlowSound-<version>.zip`.
+2. Download the universal arm64/x86_64 `FlowSound-<version>.zip`.
 3. Download `SHA256SUMS.txt`.
 4. Verify the checksum:
 
@@ -67,3 +67,9 @@ Public releases should be signed with a Developer ID Application certificate and
    defaults delete com.flowsound.FlowSound
    rm -rf ~/Library/Logs/FlowSound
    ```
+
+## Development test artifacts
+
+Local packaging writes `dist/<version>/test/`; these are ad-hoc signed test builds, not notarized public releases. Stable outputs are under `dist/<version>/stable/` and require Developer ID signing and notarization. App architecture and build toolchain are recorded in `BUILD_INFO.txt`.
+
+Use the menu's Diagnostics action for monitoring health, permission shortcuts, and Retry after fixing a reported error. Permissions and player control must be verified in the installed signed app; a successful build or an ad-hoc helper execution does not prove TCC authorization. See [the acceptance matrix](docs/COMPATIBILITY.md).

@@ -3,79 +3,133 @@ name: Release
 on:
   push:
     tags:
-      - "v*.*.*"
+      - 'v*.*.*'
   workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
-    name: Build release archive
+    name: Validate and package release
     runs-on: macos-26
+    timeout-minutes: 45
     permissions:
       contents: write
+    env:
+      EXPECTED_XCODE_MAJOR: ${{ vars.FLOWSOUND_XCODE_MAJOR || '26' }}
+      EXPECTED_XCODE_VERSION: ${{ vars.FLOWSOUND_XCODE_VERSION }}
 
     steps:
-      - name: Check out repository
+      - name: Check out all branch and tag history
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Show toolchain
+      - name: Validate selected toolchain
+        run: scripts/check-toolchain.sh
+
+      - name: Validate release metadata and required credentials
+        id: release
+        env:
+          IS_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          SIGN_IDENTITY: ${{ secrets.DEVELOPER_ID_SIGN_IDENTITY }}
+          DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
+          DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
-          sw_vers
-          xcodebuild -version
-          swift --version
+          if [[ "$IS_TAG" == true ]]; then
+            for variable in DEVELOPER_ID_CERTIFICATE_BASE64 DEVELOPER_ID_CERTIFICATE_PASSWORD KEYCHAIN_PASSWORD; do
+              if [[ -z "${!variable}" ]]; then
+                echo "Stable release requires $variable." >&2
+                exit 1
+              fi
+            done
+            RELEASE_CHANNEL=stable NOTARIZE=1 scripts/package-release.sh --check
+            echo 'channel=stable' >> "$GITHUB_OUTPUT"
+          else
+            SIGN_IDENTITY= NOTARIZE=0 RELEASE_CHANNEL=test scripts/package-release.sh --check
+            echo 'channel=test' >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
 
-      - name: Run tests
-        run: swift test
+      - name: Validate packaging safeguards
+        run: scripts/test-release.sh
+
+      - name: Run tests and compile release
+        run: |
+          swift test
+          swift build -c release
 
       - name: Import Developer ID certificate
+        if: steps.release.outputs.channel == 'stable'
         env:
           DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
           DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
-          if [[ -z "$DEVELOPER_ID_CERTIFICATE_BASE64" ]]; then
-            echo "No Developer ID certificate configured; release archive will be unsigned."
-            exit 0
-          fi
-
           CERTIFICATE_PATH="$RUNNER_TEMP/developer-id.p12"
           KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
-
-          echo "$DEVELOPER_ID_CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
+          trap 'rm -f "$CERTIFICATE_PATH"' EXIT
+          printf '%s' "$DEVELOPER_ID_CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERTIFICATE_PATH" -P "$DEVELOPER_ID_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$DEVELOPER_ID_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-      - name: Package release
+      - name: Package stable release with signing and notarization
+        if: steps.release.outputs.channel == 'stable'
         env:
+          RELEASE_CHANNEL: stable
+          RELEASE_TAG: ${{ github.ref_name }}
           SIGN_IDENTITY: ${{ secrets.DEVELOPER_ID_SIGN_IDENTITY }}
-          NOTARIZE: ${{ secrets.NOTARIZE_RELEASE }}
+          NOTARIZE: '1'
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: scripts/package-release.sh
 
-      - name: Upload release artifacts
+      - name: Package ad-hoc signed test artifact
+        if: steps.release.outputs.channel == 'test'
+        env:
+          RELEASE_CHANNEL: test
+          NOTARIZE: '0'
+        run: scripts/package-release.sh
+
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FlowSound-release
-          path: |
-            dist/FlowSound-*.zip
-            dist/SHA256SUMS.txt
-            dist/RELEASE_NOTES.md
+          name: FlowSound-${{ steps.release.outputs.version }}-${{ steps.release.outputs.channel }}
+          path: dist/${{ steps.release.outputs.version }}/${{ steps.release.outputs.channel }}/
+          if-no-files-found: error
 
-      - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Create stable GitHub Release
+        if: steps.release.outputs.channel == 'stable'
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
-          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            gh release upload "$TAG_NAME" dist/FlowSound-*.zip dist/SHA256SUMS.txt --clobber
-          else
-            gh release create "$TAG_NAME" dist/FlowSound-*.zip dist/SHA256SUMS.txt \
-              --title "FlowSound ${TAG_NAME#v}" \
-              --notes-file dist/RELEASE_NOTES.md
+          RELEASE_DIR="dist/$RELEASE_VERSION/stable"
+          # Creation fails if this release exists. Never replace public assets.
+          gh release create "$RELEASE_TAG" \
+            "$RELEASE_DIR/FlowSound-$RELEASE_VERSION.zip" \
+            "$RELEASE_DIR/SHA256SUMS.txt" \
+            "$RELEASE_DIR/BUILD_INFO.txt" \
+            --verify-tag --title "FlowSound $RELEASE_VERSION" \
+            --notes-file "$RELEASE_DIR/RELEASE_NOTES.md"
+
+      - name: Remove temporary signing material
+        if: always()
+        run: |
+          if [[ -f "$RUNNER_TEMP/app-signing.keychain-db" ]]; then
+            security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db"
           fi
+          rm -f "$RUNNER_TEMP/developer-id.p12"

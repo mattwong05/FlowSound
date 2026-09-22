@@ -1,5 +1,7 @@
 # Roadmap
 
+Historical version sections below describe delivered milestones, not verification evidence. Current remaining acceptance work is tracked in [COMPATIBILITY.md](docs/COMPATIBILITY.md).
+
 ## 0.1.x Documentation and Prototype Planning
 
 - Document feasibility, architecture, permissions, and testing requirements.
@@ -106,8 +108,22 @@
 - Keep release bundle metadata, changelog sections, and generated release notes synchronized from the repository version marker.
 - Defer Adapter Lab UI until the adapter capability model, profile format, permission model, and debug workflow are stable.
 
+## 0.16.x Preferences Workflow
+
+- Add direct actions from Recently Detected Audio Sources to Watched apps and Excluded apps.
+- Keep Monitoring as the editable source of truth while making common bundle identifier updates available from Tools.
+
+## 0.17.x Reliability and Maintenance
+
+- Implemented: session-scoped restore ownership, asynchronous monitor readiness, quiet/deferred-duck handling, bounded script execution, and observable user-intervention handling.
+- Implemented: draft-only app rules, app selection, live diagnostics, bounded logs, audio recovery listeners, CI and protected universal packaging.
+- Verified locally: pure/service/command/lifecycle tests and toolchain builds; see the compatibility matrix for exact evidence.
+- Pending: signed installation and permission attribution, real-player fades, device switching, sleep/wake, and macOS 15/27 runtime acceptance.
+
 ## 1.0.0 Release Candidate
 
-- Finalize signed and notarized distribution.
-- Validate on fresh macOS 15+ and macOS 26+ machines.
-- Freeze MVP behavior and documentation.
+- Complete the signed/notarized installation and hardware matrix.
+- Validate permission denial/recovery in a fresh macOS account.
+- Measure CPU, energy impact, and actual fade latency during a representative long session.
+- Keep Netease experimental until its menu and approximate volume behavior pass the dedicated matrix.
+- Freeze user-visible behavior and tested platform claims.

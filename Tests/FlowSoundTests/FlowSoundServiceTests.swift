@@ -55,6 +55,7 @@ import Testing
     )
 
     service.enable()
+    try await waitForState(.listening, in: service)
     activityMonitor.emit(.active)
     try await waitForState(.pausedByFlowSound, in: service)
 
@@ -88,6 +89,7 @@ import Testing
     )
 
     service.enable()
+    try await waitForState(.listening, in: service)
     activityMonitor.emit(.active)
     try await waitForState(.pausedByFlowSound, in: service)
 
@@ -120,8 +122,19 @@ private actor RecordingMusicAdapter: AbsoluteVolumeMusicControlAdapter {
     nonisolated let descriptor: MusicControlAdapterDescriptor
     private var volume: Int
     private var state: MusicPlaybackState = .playing
+    private let duckDelay: Duration
+    private let ignoresCancellation: Bool
+    private let gatedDuck: Bool
+    private let restoreLead: Duration
+    private var duckContinuation: CheckedContinuation<Void, Never>?
+    private(set) var hasStartedDuck = false
+    private(set) var restoredTargets: [MusicRestoreTarget] = []
 
-    init(playerName: String = "Test Music", initialVolume: Int) {
+    init(playerName: String = "Test Music", initialVolume: Int, duckDelay: Duration = .zero, ignoresCancellation: Bool = false, gatedDuck: Bool = false, restoreLead: Duration = .zero) {
+        self.gatedDuck = gatedDuck
+        self.restoreLead = restoreLead
+        self.duckDelay = duckDelay
+        self.ignoresCancellation = ignoresCancellation
         self.playerName = playerName
         descriptor = MusicControlAdapterDescriptor(
             id: "test.\(playerName.lowercased().replacingOccurrences(of: " ", with: "-"))",
@@ -135,6 +148,10 @@ private actor RecordingMusicAdapter: AbsoluteVolumeMusicControlAdapter {
         )
         volume = initialVolume
     }
+
+    func releaseDuck() { duckContinuation?.resume(); duckContinuation = nil }
+    func instanceIdentifier() async -> Int32? { nil }
+    func mayRestore(_ target: MusicRestoreTarget) async throws -> Bool { state == .paused && volume == 0 }
 
     func currentVolume() async throws -> Int {
         volume
@@ -153,6 +170,10 @@ private actor RecordingMusicAdapter: AbsoluteVolumeMusicControlAdapter {
             return nil
         }
         let target = MusicRestoreTarget.absoluteVolume(volume)
+        hasStartedDuck = true
+        if gatedDuck { await withCheckedContinuation { duckContinuation = $0 } }
+        if ignoresCancellation { try? await Task.sleep(for: duckDelay) }
+        else { try await Task.sleep(for: duckDelay) }
         volume = 0
         state = .paused
         return target
@@ -162,6 +183,8 @@ private actor RecordingMusicAdapter: AbsoluteVolumeMusicControlAdapter {
         guard case .absoluteVolume(let volume) = target else {
             return
         }
+        restoredTargets.append(target)
+        try await Task.sleep(for: restoreLead)
         state = .playing
         try await Task.sleep(for: .seconds(settings.fadeInDuration))
         self.volume = volume
@@ -176,12 +199,17 @@ private actor RecordingMusicAdapter: AbsoluteVolumeMusicControlAdapter {
     }
 }
 
-private final class TestAudioActivityMonitor: AudioActivityMonitor {
+private final class TestAudioActivityMonitor: AudioActivityMonitor, @unchecked Sendable {
     var onActivityChanged: (@MainActor (AudioActivity) -> Void)?
 
     private var isRunning = false
+    var onStatusChanged: (@MainActor (AudioMonitorStatus) -> Void)?
+    var shouldFail = false
+    private(set) var startCount = 0
 
-    func start(settings: FlowSoundSettings) throws {
+    func start(settings: FlowSoundSettings) async throws {
+        startCount += 1
+        if shouldFail { throw AudioActivityMonitorError.invalidFormat }
         isRunning = true
     }
 
@@ -194,4 +222,209 @@ private final class TestAudioActivityMonitor: AudioActivityMonitor {
         guard isRunning else { return }
         onActivityChanged?(activity)
     }
+}
+
+@Test @MainActor func quietDeadlineDuringDuckingStillRestores() async throws {
+    var settings = FlowSoundSettings.defaults
+    settings.quietDuration = 0.1
+    settings.fadeInDuration = 0.01
+    let adapter = RecordingMusicAdapter(initialVolume: 35, duckDelay: .milliseconds(220))
+    let monitor = TestAudioActivityMonitor()
+    let service = FlowSoundService(settings: settings, musicAdapter: adapter, activityMonitor: monitor)
+    defer { service.disable() }
+    service.enable()
+    try await waitForState(.listening, in: service)
+    monitor.emit(.active)
+    monitor.emit(.quiet)
+    let deadline = ContinuousClock.now + .seconds(2)
+    while await adapter.restoredTargets.isEmpty, ContinuousClock.now < deadline {
+        try await Task.sleep(for: .milliseconds(5))
+    }
+    try await waitForState(.listening, in: service)
+    #expect(try await adapter.currentVolume() == 35)
+    #expect(await adapter.restoredTargets == [.absoluteVolume(35)])
+}
+
+@Test @MainActor func disabledPlayerChangeDoesNotReuseOldVolume() async throws {
+    var settings = FlowSoundSettings.defaults
+    settings.quietDuration = 0.01
+    settings.fadeInDuration = 0.01
+    let first = RecordingMusicAdapter(initialVolume: 21)
+    let second = RecordingMusicAdapter(initialVolume: 70)
+    let monitor = TestAudioActivityMonitor()
+    let service = FlowSoundService(settings: settings, musicAdapter: first, activityMonitor: monitor)
+    defer { service.disable() }
+    service.enable()
+    try await waitForState(.listening, in: service)
+    monitor.emit(.active)
+    try await waitForState(.pausedByFlowSound, in: service)
+    service.disable()
+    settings.controlledMusicPlayer = .spotify
+    service.updateSettings(settings, musicAdapter: second)
+    service.enable()
+    try await waitForState(.listening, in: service)
+    monitor.emit(.active)
+    try await waitForState(.pausedByFlowSound, in: service)
+    monitor.emit(.quiet)
+    try await waitForState(.listening, in: service)
+    #expect(try await second.currentVolume() == 70)
+}
+
+@Test @MainActor func cancelledDuckCannotSetAnotherPlayersRestoreTarget() async throws {
+    var settings = FlowSoundSettings.defaults
+    settings.quietDuration = 0.01
+    settings.fadeInDuration = 0.01
+    let first = RecordingMusicAdapter(initialVolume: 21, ignoresCancellation: true, gatedDuck: true)
+    let second = RecordingMusicAdapter(initialVolume: 70)
+    let monitor = TestAudioActivityMonitor()
+    let service = FlowSoundService(settings: settings, musicAdapter: first, activityMonitor: monitor)
+    defer { service.disable() }
+    service.enable()
+    try await waitForState(.listening, in: service)
+    monitor.emit(.active)
+    let enteredDeadline = ContinuousClock.now + .seconds(2)
+    while await !first.hasStartedDuck, ContinuousClock.now < enteredDeadline {
+        try await Task.sleep(for: .milliseconds(5))
+    }
+    #expect(await first.hasStartedDuck)
+    settings.controlledMusicPlayer = .spotify
+    service.updateSettings(settings, musicAdapter: second)
+    await first.releaseDuck()
+    try await waitForState(.listening, in: service)
+    monitor.emit(.active)
+    try await waitForState(.pausedByFlowSound, in: service)
+    monitor.emit(.quiet)
+    try await waitForState(.listening, in: service)
+    #expect(try await second.currentVolume() == 70)
+}
+
+@Test @MainActor func monitorStartupFailureIsVisibleAndRetryable() async throws {
+    let monitor = TestAudioActivityMonitor()
+    monitor.shouldFail = true
+    let service = FlowSoundService(settings: .defaults, musicAdapter: RecordingMusicAdapter(initialVolume: 30), activityMonitor: monitor)
+    defer { service.disable() }
+    service.enable()
+    #expect(service.state == .starting)
+    try await waitForState(.error(AudioActivityMonitorError.invalidFormat.localizedDescription), in: service)
+    monitor.shouldFail = false
+    service.retry()
+    try await waitForState(.listening, in: service)
+    #expect(monitor.startCount == 2)
+}
+
+@Test @MainActor func presentationAndFadeChangesDoNotRestartMonitoring() async throws {
+    var settings = FlowSoundSettings.defaults
+    let monitor = TestAudioActivityMonitor()
+    let service = FlowSoundService(settings: settings, musicAdapter: RecordingMusicAdapter(initialVolume: 30), activityMonitor: monitor)
+    defer { service.disable() }
+    service.enable()
+    try await waitForState(.listening, in: service)
+    settings.languagePreference = .simplifiedChinese
+    settings.fadeInDuration = 5
+    service.updateSettings(settings)
+    service.updateSettings(settings)
+    #expect(monitor.startCount == 1)
+}
+
+@Test @MainActor func newQuietObservationAfterRuleChangeRestoresOwnedMusic() async throws {
+    var settings = FlowSoundSettings.defaults
+    settings.quietDuration = 0.01
+    settings.fadeInDuration = 0.01
+    let adapter = RecordingMusicAdapter(initialVolume: 43)
+    let monitor = TestAudioActivityMonitor()
+    let service = FlowSoundService(settings: settings, musicAdapter: adapter, activityMonitor: monitor)
+    defer { service.disable() }
+    service.enable()
+    try await waitForState(.listening, in: service)
+    monitor.emit(.active)
+    try await waitForState(.pausedByFlowSound, in: service)
+    settings.watchedBundleIdentifiers = ["com.example.Replacement"]
+    service.updateSettings(settings)
+    let deadline = ContinuousClock.now + .seconds(2)
+    while service.monitorStatus != .running, ContinuousClock.now < deadline {
+        try await Task.sleep(for: .milliseconds(5))
+    }
+    #expect(service.monitorStatus == .running)
+    monitor.emit(.quiet)
+    try await waitForState(.listening, in: service)
+    #expect(try await adapter.currentVolume() == 43)
+}
+
+@Test @MainActor func manualVolumeChangeRelinquishesAutomaticRestore() async throws {
+    var settings = FlowSoundSettings.defaults
+    settings.quietDuration = 0.01
+    let adapter = RecordingMusicAdapter(initialVolume: 40)
+    let monitor = TestAudioActivityMonitor()
+    let service = FlowSoundService(settings: settings, musicAdapter: adapter, activityMonitor: monitor)
+    defer { service.disable() }
+    service.enable()
+    try await waitForState(.listening, in: service)
+    monitor.emit(.active)
+    try await waitForState(.pausedByFlowSound, in: service)
+    try await adapter.setVolume(18)
+    monitor.emit(.quiet)
+    try await waitForState(.listening, in: service)
+    #expect(try await adapter.currentVolume() == 18)
+    #expect(await adapter.restoredTargets.isEmpty)
+    #expect(service.lastControlError != nil)
+}
+
+@Test @MainActor func audioInterruptingRestoreBeforePlayKeepsPauseOwnership() async throws {
+    var settings = FlowSoundSettings.defaults
+    settings.quietDuration = 0.01
+    settings.fadeInDuration = 0.01
+    let adapter = RecordingMusicAdapter(initialVolume: 47, restoreLead: .milliseconds(200))
+    let monitor = TestAudioActivityMonitor()
+    let service = FlowSoundService(settings: settings, musicAdapter: adapter, activityMonitor: monitor)
+    defer { service.disable() }
+    service.enable()
+    try await waitForState(.listening, in: service)
+    monitor.emit(.active)
+    try await waitForState(.pausedByFlowSound, in: service)
+    monitor.emit(.quiet)
+    try await waitForState(.restoring, in: service)
+    monitor.emit(.active)
+    try await waitForState(.pausedByFlowSound, in: service)
+    monitor.emit(.quiet)
+    try await waitForState(.listening, in: service)
+    #expect(try await adapter.currentVolume() == 47)
+}
+
+@Test @MainActor func monitorRecoveryNotifiesMenuObserversWithoutMusicTransition() async throws {
+    let monitor = TestAudioActivityMonitor()
+    let service = FlowSoundService(settings: .defaults, musicAdapter: RecordingMusicAdapter(initialVolume: 20), activityMonitor: monitor)
+    defer { service.disable() }
+    service.enable()
+    try await waitForState(.listening, in: service)
+    var notifications = 0
+    service.onStateChanged = { _ in notifications += 1 }
+    monitor.onStatusChanged?(.recovering)
+    #expect(service.monitorStatus == .recovering)
+    #expect(service.state == .listening)
+    #expect(notifications == 1)
+}
+
+@Test @MainActor func monitorRecoveryCancelsPendingPlaybackUntilFreshQuiet() async throws {
+    var settings = FlowSoundSettings.defaults
+    settings.quietDuration = 0.01
+    settings.fadeInDuration = 0.01
+    let adapter = RecordingMusicAdapter(initialVolume: 47, restoreLead: .milliseconds(150))
+    let monitor = TestAudioActivityMonitor()
+    let service = FlowSoundService(settings: settings, musicAdapter: adapter, activityMonitor: monitor)
+    defer { service.disable() }
+    service.enable()
+    try await waitForState(.listening, in: service)
+    monitor.emit(.active)
+    try await waitForState(.pausedByFlowSound, in: service)
+    monitor.emit(.quiet)
+    try await waitForState(.restoring, in: service)
+    monitor.onStatusChanged?(.recovering)
+    try await waitForState(.pausedByFlowSound, in: service)
+    try await Task.sleep(for: .milliseconds(200))
+    #expect(try await adapter.playbackState() == .paused)
+    #expect(service.restoreDeadline == nil)
+    monitor.onStatusChanged?(.running)
+    monitor.emit(.quiet)
+    try await waitForState(.listening, in: service)
+    #expect(try await adapter.currentVolume() == 47)
 }

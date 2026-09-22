@@ -24,7 +24,7 @@ Responsibilities:
 
 Writes local startup and status item events to `~/Library/Logs/FlowSound/FlowSound.log`.
 
-The log is intentionally simple and local-only. It exists because macOS menu bar apps can otherwise fail invisibly: no Dock icon, no main window, and no terminal output when launched through Finder.
+The log is serialized on a utility queue, rotates at 1 MiB, retains one previous file, and is local-only. It exists because macOS menu bar apps can otherwise fail invisibly: no Dock icon, no main window, and no terminal output when launched through Finder.
 
 ### AudioWatcher
 
@@ -39,7 +39,7 @@ Responsibilities:
 - Read captured audio buffers.
 - Compute RMS level from the captured PCM buffers.
 - Poll matching Core Audio process objects for active output IO as a fallback signal.
-- Emit debounced activity events: audible, quiet, unavailable, permission denied.
+- Emit observed active/quiet events separately from stopped/starting/running/recovering/failed status. Startup is async/throwing; errors reach the service.
 
 ### SignalDetector
 
@@ -81,11 +81,11 @@ Coordinates the product behavior.
 Initial states:
 
 - `disabled`
+- `starting`
 - `listening`
 - `ducking`
 - `pausedByFlowSound`
 - `restoring`
-- `permissionBlocked`
 - `error`
 
 Important rules:
@@ -119,11 +119,11 @@ Settings are stored in `UserDefaults` through `FlowSoundSettingsStore`. Updates 
 
 Audio monitoring mode is persisted in `UserDefaults`. The default mode monitors all app audio except the selected music app, FlowSound, and common macOS notification services. Watched-app-only mode uses the user-editable bundle identifier list.
 
-Watched bundle identifiers are parsed from Preferences, validated, deduplicated, and persisted. If the saved whitelist is empty or invalid, FlowSound falls back to the default Safari and Telegram identifiers.
+Watched bundle identifiers are parsed from Preferences, validated, deduplicated, and persisted. Missing preferences use registered defaults. Explicitly empty lists remain empty across saves/restarts; invalid entries are filtered. The selected music player and FlowSound stay implicitly excluded.
 
 Safari is expanded at runtime to include WebKit helper bundle identifiers because website audio, including YouTube playback, may be emitted by helper processes rather than the `com.apple.Safari` process itself.
 
-Preferences uses General, Monitoring, and Tools tabs. General owns language, music app, timing, and launch-at-login. Monitoring owns raw watched and excluded bundle identifier editors. Tools owns the diagnostics actions and a recent audio source panel that records Core Audio output processes seen in the last 3 minutes, including their current watched or excluded status.
+Preferences uses General, Monitoring, and Tools tabs. General owns language, music app, timing, and launch-at-login. Monitoring owns raw watched and excluded bundle identifier editors. Tools owns the diagnostics actions and a recent audio source panel that records Core Audio output processes seen in the last 3 minutes, including their current watched or excluded status. Recent-source rows and native application pickers update a shared draft. Save is the only persistence boundary; Cancel discards changes. Monitoring shows app names/icons and keeps raw identifiers in an advanced editor.
 
 ### LoginItemController
 
@@ -161,7 +161,7 @@ The app bundle icon uses the generated `.icns` file declared through `CFBundleIc
 
 ### Release Packaging
 
-`scripts/package-release.sh` builds a release app bundle, optionally signs and notarizes it, packages it as a zip archive, and writes a SHA-256 checksum file.
+`scripts/package-release.sh` builds a release app bundle, signs test bundles ad-hoc or requires Developer ID signing and notarization for stable releases, packages it as a zip archive, and writes a SHA-256 checksum file.
 
 Release packaging responsibilities:
 
@@ -170,8 +170,8 @@ Release packaging responsibilities:
 - Inject `VERSION` into the generated `Info.plist` before signing or archiving.
 - Fail release packaging if bundle metadata or changelog release notes do not match `VERSION`.
 - Keep unsigned development archives possible for testers.
-- Use Developer ID signing and notarization when release credentials are available.
-- Publish `FlowSound-<version>.zip` and `SHA256SUMS.txt`.
+- Require Developer ID signing, the Apple Events entitlement and notarization for stable releases; manual workflow runs only produce test artifacts.
+- Stage complete artifacts before renaming into `dist/<version>/<test|stable>/`; refuse existing output. Include the zip, checksums, release notes and build provenance.
 - Keep release notes explicit about macOS 15+, supported music apps, and required permissions.
 
 ### Website
@@ -191,8 +191,8 @@ Responsibilities:
 
 - Default selected music app: Apple Music.
 - Monitoring mode: all apps except the selected music app.
-- Excluded bundle identifiers: selected music app, FlowSound, and common macOS notification services.
-- Watched-app-only fallback whitelist: Safari and Telegram.
+- Excluded bundle identifiers: selected music app, FlowSound, common macOS notification services, and known Core Audio system audio services such as `systemsoundserverd`.
+- Initial watched-app-only whitelist: Safari and Telegram.
 - Active duration: 1 second.
 - Quiet duration: 3 seconds.
 - Fade-out duration: 2 seconds.
@@ -217,11 +217,21 @@ flowchart LR
 
 - Use Core Audio process taps instead of microphone input so FlowSound detects app output, not room sound. The codebase currently keeps this behind `AudioActivityMonitor`.
 - Use all-apps-except-selected-music-app monitoring by default to avoid per-app bundle identifier friction.
-- Use an excluded bundle identifier list to filter the selected music app, FlowSound, and common notification services from all-apps monitoring.
-- Use Core Audio process-output polling as a fallback activity source when a matching process is actively outputting audio.
+- Use an excluded identifier list to filter the selected music app, FlowSound, common notification services, known system audio services, and user-selected Safari helpers from monitoring.
+- Use process-output polling as a lower-confidence fallback in watched mode only when fresh PCM is unavailable; real silent PCM takes precedence.
 - Record recent Core Audio output processes for Preferences > Tools so users can discover real bundle identifiers without guessing.
 - Use AppleScript as a small official adapter implementation instead of ScriptingBridge-heavy integration.
 - Keep adapter capability metadata explicit so unreliable player integrations can be labeled experimental or community-supported instead of being presented as native support.
-- Use Core Audio bundle-ID tap configuration on macOS 26 and newer. On macOS 15-25, use current Core Audio process object IDs because `CATapDescription.bundleIDs` and process restoration are macOS 26+ API.
+- Use Core Audio bundle-ID tap configuration on macOS 26 and newer. On macOS 15, use Core Audio process object IDs and observe relevant process-list changes because `CATapDescription.bundleIDs` and process restoration are macOS 26+ API.
 - Keep the first version local-only with no network service.
 - Treat permission failures as first-class app states.
+
+## Control ownership and recovery
+
+`FlowSoundService` stores the owning player and process instance with its restore target. Each asynchronous operation has a generation token checked after awaits, including nil results and failures. Quiet observations use a monotonic deadline, rechecked when an outstanding duck finishes. Relative-step adapters replace interrupted restore counts; absolute-volume adapters preserve the original volume for the same instance. Monitor callbacks use their own session generation so queued old events cannot affect a new stream.
+
+The audio layer owns listeners for default output, device liveness/rate, tap format, sleep/wake and macOS 15 process changes. Recovery uses debouncing and bounded attempts. Missing samples are not evidence of silence. PCM format validation and activity timing live in pure helpers; lifecycle fault tests inject startup/cleanup functions without opening devices.
+
+`BoundedProcessRunner` serializes commands on a dedicated queue, drains bounded output, and kills only its own child on cancellation or deadline. Official fades execute one AppleScript per fade and yield on observable playback/volume intervention. The Netease helper invokes the same signed FlowSound executable with a private automation argument, executes NSAppleScript on the child main thread, and exits before constructing the app. Signed installation tests must verify its TCC attribution; unit tests do not establish permission behavior. Imported adapter metadata never supplies executable scripts.
+
+Diagnostics reads service health, recent automation outcomes, permission hints, and a countdown. It does not claim exact source attribution from a mixed stream. Opening diagnostics is read-only; simulation and retry require explicit button actions. Deactivation cancels commands and relinquishes ownership without automatically playing the old player.

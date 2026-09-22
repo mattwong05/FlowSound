@@ -4,13 +4,15 @@ FlowSound is a native macOS menu bar app that fades and pauses Apple Music or Sp
 
 ## Compatibility
 
-- macOS 15 or newer.
+- macOS 15 or newer; universal Apple Silicon (arm64) and Intel (x86_64) app.
+- Compilation with the macOS 27 SDK does not establish macOS 27 runtime acceptance; see `docs/COMPATIBILITY.md`.
 - Apple Music, Spotify, or experimental Netease Cloud Music.
 
 ## Download
 
 - `FlowSound-VERSION.zip`
 - `SHA256SUMS.txt`
+- `BUILD_INFO.txt`
 
 Verify the download:
 
@@ -47,5 +49,5 @@ See `INSTALL.md` for details.
 - Apple Music and Spotify are official support paths. Netease Cloud Music is experimental and can break if its menu layout changes.
 - Netease Cloud Music requires Accessibility permission so FlowSound can click its Controls menu. Its volume restore is approximate because Netease exposes relative volume steps instead of an exact readable volume.
 - Adapter profile import/export is local JSON metadata only. FlowSound does not download scripts or make network requests for profiles.
-- Unsigned builds are ad-hoc signed for bundle integrity but may still require manual Gatekeeper approval.
+- Test artifacts are ad-hoc signed and may require manual Gatekeeper approval; stable release packaging requires Developer ID signing and notarization.
 - Launch at Login should be validated with signed and installed builds.

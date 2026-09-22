@@ -14,7 +14,7 @@ Official releases should include:
 
 Unsigned tester builds should still be ad-hoc signed after the `.app` bundle is assembled so macOS can verify bundle integrity. Ad-hoc signing does not replace Developer ID signing or notarization.
 
-When a Developer ID certificate is available, public releases should also be:
+Stable public packaging requires all of the following:
 
 - Signed with a Developer ID Application certificate.
 - Notarized by Apple.
@@ -58,3 +58,5 @@ FlowSound should keep these boundaries explicit:
 - Permission failures should be visible to the user.
 - FlowSound should not resume the selected music app unless FlowSound paused it.
 - FlowSound should not add network behavior without documentation and review.
+
+The Apple Events entitlement is included in the app signature. Stable tags must match VERSION and a clean commit contained in origin/main. Manual workflow runs only create test artifacts; existing releases and artifact directories are not overwritten. The automation child accepts only fixed Netease command names and never accepts caller-provided AppleScript. Commands have bounded execution and output capture.
