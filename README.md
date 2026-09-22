@@ -16,6 +16,10 @@ The static site lives in [`site/`](site/) and supports English and Simplified Ch
 
 ## Download
 
+The redesigned **[0.18.0 public preview](https://github.com/mattwong05/FlowSound/releases/tag/preview-0.18.0)** is available with native settings, separate application-rule lists, and reliability improvements. It is ad-hoc signed and not notarized; read the release's installation and compatibility notes before opening it. macOS 27 runtime validation remains pending.
+
+**[0.15.1 remains the latest stable download](https://github.com/mattwong05/FlowSound/releases/latest).** Preview application code lives on `dev`; the application source on `main` remains at the stable release. 官网提供新版界面截图和中英文下载说明，0.18.0 公开预览版尚未经过 Apple 公证。
+
 Public releases are published on GitHub:
 
 https://github.com/mattwong05/FlowSound/releases
