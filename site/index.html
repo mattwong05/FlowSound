@@ -28,6 +28,7 @@
         </picture>
       </a>
       <nav class="nav" aria-label="Primary">
+        <a data-i18n="navWhatsNew" href="#whats-new">What’s new</a>
         <a data-i18n="navDemo" href="#demo">Demo</a>
         <a data-i18n="navPrivacy" href="#privacy">Privacy</a>
         <a data-i18n="navPermissions" href="#permissions">Permissions</a>
@@ -47,13 +48,16 @@
             FlowSound fades and pauses Apple Music or Spotify when other apps play audio, then restores it when things become quiet again. Netease Cloud Music is available as an experimental adapter.
           </p>
           <div class="actions">
-            <a class="button primary" data-i18n="download" href="https://github.com/mattwong05/FlowSound/releases/latest">
-              Download for macOS
+            <a class="button primary" data-i18n="downloadPreview" href="https://github.com/mattwong05/FlowSound/releases/tag/preview-0.18.0">
+              Try 0.18.0 preview
             </a>
-            <a class="button secondary" data-i18n="github" href="https://github.com/mattwong05/FlowSound">
-              View on GitHub
+            <a class="button secondary" data-i18n="downloadStable" href="https://github.com/mattwong05/FlowSound/releases/latest">
+              Download stable 0.15.1
             </a>
           </div>
+          <p class="release-note" data-i18n="previewNote">
+            0.18.0 is a public preview, ad-hoc signed and not notarized. macOS may block it on first open. macOS 27 runtime testing is still pending.
+          </p>
           <p class="note" data-i18n="heroNote">
             Built for macOS 15+. Official Apple Music and Spotify support. Experimental Netease Cloud Music. Local-first, no analytics.
           </p>
@@ -136,6 +140,40 @@
           <p class="focus-outcome" data-i18n="focusOutcome">
             Avoid overlapping audio. Avoid sudden silence. Stay in flow.
           </p>
+        </div>
+      </section>
+
+      <section class="section release-section" id="whats-new">
+        <div class="section-heading">
+          <p class="eyebrow" data-i18n="releaseEyebrow">New in 0.18.0 · Public preview</p>
+          <h2 data-i18n="releaseTitle">A clearer place for every setting.</h2>
+          <p data-i18n="releaseText">Native controls, considered spacing, and a simpler way to decide which apps can interrupt your music.</p>
+        </div>
+        <div class="release-layout">
+          <figure class="settings-preview">
+            <a id="settings-screenshot-link" href="/assets/settings-en-light.png" target="_blank" rel="noopener noreferrer" aria-label="View the settings screenshot at full size" data-i18n-label="screenshotLinkLabel">
+              <picture>
+                <source id="settings-screenshot-dark" srcset="/assets/settings-en-dark.png" media="(prefers-color-scheme: dark)">
+                <img id="settings-screenshot" src="/assets/settings-en-light.png" alt="FlowSound application rules with separate Watched apps and Ignored apps columns" data-i18n-alt="screenshotAlt" width="1640" height="1476" loading="lazy" decoding="async">
+              </picture>
+            </a>
+            <figcaption data-i18n="screenshotCaption">Actual native interface with sample rules. Shown on macOS 26. Click to view full size.</figcaption>
+          </figure>
+          <div class="release-details">
+            <article>
+              <h3 data-i18n="rulesTitle">Two lists. Clear choices.</h3>
+              <p data-i18n="rulesText">Manage watched and ignored apps side by side, with app icons and aligned controls. Changes take effect only when you save.</p>
+            </article>
+            <article>
+              <h3 data-i18n="timingTitle">Get the timing right.</h3>
+              <p data-i18n="timingText">Adjust fades and quiet time with familiar sliders, or enter an exact value in the dedicated Sound pane.</p>
+            </article>
+            <article>
+              <h3 data-i18n="reliabilityTitle">Know what’s happening.</h3>
+              <p data-i18n="reliabilityText">See monitoring and permission status in Diagnostics. Recovery handles audio-device changes and sleep/wake, while playback controls respect observable manual changes.</p>
+            </article>
+            <a class="text-link" data-i18n="releaseNotes" href="https://github.com/mattwong05/FlowSound/releases/tag/preview-0.18.0">Read the preview release notes →</a>
+          </div>
         </div>
       </section>
 
@@ -233,9 +271,17 @@
             </p>
           </details>
           <details>
+            <summary data-i18n="faqVersionQ">Which version should I download?</summary>
+            <p data-i18n="faqVersionA">Choose the 0.18.0 preview to try the redesigned interface and reliability updates. The previous stable channel remains at 0.15.1. Read each release’s installation notes before opening it.</p>
+          </details>
+          <details>
+            <summary data-i18n="faqMacOSQ">Does it work on macOS 26 and 27?</summary>
+            <p data-i18n="faqMacOSA">FlowSound targets macOS 15 and later. A user reported that 0.17.0 runs on macOS 26; 0.18.0 has been built and its native interface reviewed on macOS 26. Building with the macOS 27 SDK does not establish macOS 27 runtime compatibility, which still needs testing.</p>
+          </details>
+          <details>
             <summary data-i18n="faqWarningQ">Why does macOS warn me when opening it?</summary>
             <p data-i18n="faqWarningA">
-              Current builds are ad-hoc signed tester builds until a Developer ID notarized release is available.
+              The 0.18.0 preview is ad-hoc signed and not notarized by Apple. Gatekeeper may block it on first open. Review the GitHub release notes and checksum before deciding whether to run it.
             </p>
           </details>
         </div>

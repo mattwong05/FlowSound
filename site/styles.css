@@ -9,6 +9,7 @@
   --line: #ccd8d2;
   --accent: #247a50;
   --accent-strong: #155c39;
+  --on-accent: #ffffff;
   --accent-warm: #d5543f;
   --shadow: rgba(19, 35, 27, 0.12);
 }
@@ -24,6 +25,7 @@
     --line: #334139;
     --accent: #58c987;
     --accent-strong: #91e0af;
+    --on-accent: #101211;
     --accent-warm: #ff7a62;
     --shadow: rgba(0, 0, 0, 0.35);
   }
@@ -178,7 +180,7 @@ h1 {
 }
 
 .button.primary {
-  color: #ffffff;
+  color: var(--on-accent);
   background: var(--accent);
   border-color: var(--accent);
 }
@@ -200,6 +202,81 @@ h1 {
   margin: 18px 0 0;
   color: var(--muted);
   font-size: 14px;
+}
+
+.release-note {
+  max-width: 650px;
+  margin: 16px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.release-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(250px, 0.65fr);
+  gap: clamp(28px, 4vw, 60px);
+  align-items: center;
+}
+
+.settings-preview {
+  min-width: 0;
+  margin: 0;
+}
+
+.settings-preview a,
+.settings-preview img {
+  display: block;
+  width: 100%;
+  border-radius: 14px;
+}
+
+.settings-preview img {
+  height: auto;
+  box-shadow: 0 14px 42px var(--shadow);
+}
+
+.settings-preview figcaption {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.release-details {
+  display: grid;
+  gap: 28px;
+}
+
+.release-details h3 {
+  margin: 0 0 8px;
+  font-size: 23px;
+  line-height: 1.2;
+}
+
+.release-details p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.text-link {
+  color: var(--accent-strong);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+:where(a, button, summary):focus-visible {
+  outline: 3px solid var(--accent-strong);
+  outline-offset: 4px;
+}
+
+section[id] {
+  scroll-margin-top: 115px;
 }
 
 .product-hunt-badge {
@@ -576,9 +653,23 @@ h1 {
     grid-template-columns: 1fr;
   }
 
+  .release-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .release-details {
+    gap: 22px;
+  }
+
   .site-footer {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 }
 
