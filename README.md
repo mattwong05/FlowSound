@@ -20,6 +20,8 @@ Public releases are published on GitHub:
 
 https://github.com/mattwong05/FlowSound/releases
 
+[0.18.0 public preview](https://github.com/mattwong05/FlowSound/releases/tag/preview-0.18.0) includes the redesigned native interface and reliability improvements. It is a universal, ad-hoc signed build and is **not notarized**. The existing [0.15.1 release](https://github.com/mattwong05/FlowSound/releases/tag/v0.15.1) remains the default release. See [preview notes](docs/releases/0.18.0-preview.md) for changes and validation limits.
+
 Download `FlowSound-<version>.zip` and `SHA256SUMS.txt`, then verify the archive:
 
 ```sh

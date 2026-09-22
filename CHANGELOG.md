@@ -22,6 +22,7 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 - Added a dedicated Sound pane with native sliders and exact numeric inputs for fade, restore and detection timing.
 - Added a documented native macOS design baseline and repeatable visual acceptance guidance.
 - Added an isolated native preview script for screenshot review and settings draft, persistence and keyboard-focus checks.
+- Added a bilingual website introduction and native screenshots for the 0.18.0 public preview, with separate preview and default-release download links.
 
 ### Changed
 
@@ -54,7 +55,7 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 - Changed official-player fades to one bounded script process per fade. Netease UI scripts run on the main thread of a short-lived copy of the signed app executable, keeping the menu app responsive.
 - Changed restore ownership to track the selected player and running instance, rejecting stale results and observable manual playback/volume changes.
 - Changed logs to serialized asynchronous writes with one 1 MiB current file and one rotated file.
-- Changed public releases to require Developer ID signing, the Apple Events entitlement, notarization, matching version/tag metadata, and stable-branch ancestry. Manual workflow runs only create test artifacts.
+- Changed stable public releases to require Developer ID signing, the Apple Events entitlement, notarization, matching version/tag metadata, and stable-branch ancestry. Manual workflow runs only create test artifacts.
 - Changed artifact output to `dist/<version>/<test|stable>/`; existing output and public release assets are never silently replaced.
 
 ### Fixed

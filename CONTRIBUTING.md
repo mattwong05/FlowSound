@@ -78,6 +78,10 @@ The Release workflow requires certificate/password/keychain/signing identity and
 
 CI runs on pull requests and main/dev/codex branches, executing `swift test`, a Release build, universal packaging, and `scripts/test-release.sh`. Toolchain success is not runtime compatibility evidence: signed installation, TCC permissions, real players, and hardware require [the acceptance matrix](docs/COMPATIBILITY.md).
 
+### Public previews
+
+When publication is authorized but Developer ID signing/notarization is unavailable, a verified `test` artifact may be published explicitly as a GitHub prerelease. Use a `preview-<VERSION>` tag on the reviewed development commit, `gh release create --verify-tag --prerelease --latest=false`, and an explicit ad-hoc/not-notarized notice in the notes and website. Upload the archive, checksum and build information together; do not replace existing assets. `preview-` tags do not trigger the stable `v*.*.*` workflow. Leave the latest stable release and `main` application code unchanged. Website-only updates may be applied to `main` so its existing Cloudflare Pages integration can publish preview information. Stable signing and acceptance gates still apply before promotion.
+
 ## Website Deployment
 
 The landing page is a no-build static site in `site/`.
